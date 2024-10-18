@@ -1,0 +1,111 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: torch-workload
+spec:
+  backoffLimit: 0
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        kueue.x-k8s.io/queue-name: landyliu-ei-h800
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: torch
+          image: 10.5.1.249/bob-base-image/lora-peft:12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-v0.9.0-pytorch-24.02-py3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3389
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PYTHONUNBUFFERED
+              value: "0"
+            - name: MODEL_NAME
+              value: ${MODEL_NAME}
+            - name: GPUS_PER_NODE
+              value: "${GPUS_PER_NODE}"
+            - name: NNODES
+              value: "1"
+            - name: NODE_RANK
+              value: "0"
+            - name: MASTER_ADDR
+              value: "127.0.0.1"
+            - name: MASTER_PORT
+              value: "12345"
+            - name: EPOCHS
+              value: "${EPOCHS}"
+            - name: TRAIN_BATCH_SIZE_PER_DEVICE
+              value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
+            - name: DATASET_DIR
+              value: "/data/datasets"
+          securityContext:
+            privileged: true
+          command:
+            - bash
+            - -xc
+            - /workspace/script.sh
+          resources:
+            requests:
+              nvidia.com/gpu: "${GPUS_PER_NODE}"
+            limits:
+              nvidia.com/gpu: "${GPUS_PER_NODE}"
+          volumeMounts:
+            - name: models
+              mountPath: /data/models
+              readOnly: true
+            - mountPath: /dev/shm
+              name: dshm
+            - name: dataset
+              mountPath: /data/datasets/identity.json
+              subPath: identity.json
+              readOnly: true
+            - name: dataset-info
+              mountPath: /data/datasets/dataset_info.json
+              subPath: dataset_info.json
+              readOnly: true
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+            - name: model-cache
+              mountPath: /root/.cache/modelscope
+            - name: output
+              mountPath: /app/output
+            - name: script
+              mountPath: /workspace
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 80Gi
+        - name: dataset
+          configMap:
+            name: dataset
+            items:
+              - key: identity.json
+                path: identity.json
+        - name: dataset-info
+          configMap:
+            name: dataset-info
+            items:
+              - key: dataset_info.json
+                path: dataset_info.json
+        - name: hf-cache
+          emptyDir: {}
+        - name: model-cache
+          emptyDir: {}
+        - name: output
+          emptyDir: {}
+        - hostPath:
+            path: /lustre/test1/huggingface-models
+          name: models
+        - name: script
+          configMap:
+            name: script
+            defaultMode: 0755
+            items:
+              - key: script.sh
+                path: script.sh
