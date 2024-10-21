@@ -43,6 +43,8 @@ spec:
               value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
             - name: DATASET_DIR
               value: "/data/datasets"
+            - name: DATASET_TEMPLATE
+              value: "${DATASET_TEMPLATE}"
           securityContext:
             privileged: true
           command:
