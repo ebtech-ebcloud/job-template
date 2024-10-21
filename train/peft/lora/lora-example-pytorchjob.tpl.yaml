@@ -32,6 +32,8 @@ spec:
                   value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
                 - name: DATASET_DIR
                   value: "/data/datasets"
+                - name: DATASET_TEMPLATE
+                  value: "${DATASET_TEMPLATE}"
                 - name: TZ
                   value: Asia/Shanghai
               image: 10.5.1.249/bob-base-image/lora-peft:12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-v0.9.0-pytorch-24.02-py3
@@ -129,6 +131,8 @@ spec:
                   value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
                 - name: DATASET_DIR
                   value: "/data/datasets"
+                - name: DATASET_TEMPLATE
+                  value: "${DATASET_TEMPLATE}"
                 - name: TZ
                   value: Asia/Shanghai
               image: 10.5.1.249/bob-base-image/lora-peft:12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-v0.9.0-pytorch-24.02-py3
