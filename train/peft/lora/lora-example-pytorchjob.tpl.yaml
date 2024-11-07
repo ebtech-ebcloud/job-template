@@ -1,9 +1,7 @@
 apiVersion: kubeflow.org/v1
 kind: PyTorchJob
 metadata:
-  name: torch-workload
-  labels:
-    kueue.x-k8s.io/queue-name: landyliu-ei-h800
+  name: ${JOB_NAME}
 spec:
   nprocPerNode: "${GPUS_PER_NODE}"
   pytorchReplicaSpecs:
@@ -12,6 +10,15 @@ spec:
       restartPolicy: Never
       template:
         spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: cloud.ebtech.com/gpu # GPU节点的标签
+                        operator: In
+                        values:
+                        - ${GPU_SPEC}
           containers:
             - command:
                 - bash
@@ -45,18 +52,22 @@ spec:
               name: pytorch
               resources:
                 limits:
+                  cpu: "${CPU_RESOURCES_LIMITS}"
+                  memory: "${MEM_RESOURCES_LIMITS}"
                   nvidia.com/gpu: "${GPUS_PER_NODE}"
-                  # rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
                 requests:
+                  cpu: "${CPU_RESOURCES_REQS}"
+                  memory: "${MEM_RESOURCES_REQS}"
                   nvidia.com/gpu: "${GPUS_PER_NODE}"
-                  # rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
               securityContext:
                 capabilities:
                   add:
                     - IPC_LOCK
               volumeMounts:
                 - name: models
-                  mountPath: /data/models
+                  mountPath: /data
                   readOnly: true
                 - mountPath: /dev/shm
                   name: dshm
@@ -100,9 +111,9 @@ spec:
               emptyDir: {}
             - name: output
               emptyDir: {}
-            - hostPath:
-                path: /lustre/test1/huggingface-models
-              name: models
+            - name: models
+              persistentVolumeClaim:
+                claimName: wzf0001
             - name: script
               configMap:
                 name: script
@@ -115,6 +126,15 @@ spec:
       restartPolicy: Never
       template:
         spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: cloud.ebtech.com/gpu # GPU节点的标签
+                        operator: In
+                        values:
+                        - ${GPU_SPEC}
           containers:
             - command:
                 - bash
@@ -148,18 +168,22 @@ spec:
               name: pytorch
               resources:
                 limits:
+                  cpu: "${CPU_RESOURCES_LIMITS}"
+                  memory: "${MEM_RESOURCES_LIMITS}"
                   nvidia.com/gpu: "${GPUS_PER_NODE}"
-                  # rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
                 requests:
+                  cpu: "${CPU_RESOURCES_REQS}"
+                  memory: "${MEM_RESOURCES_REQS}"
                   nvidia.com/gpu: "${GPUS_PER_NODE}"
-                  # rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
               securityContext:
                 capabilities:
                   add:
                     - IPC_LOCK
               volumeMounts:
                 - name: models
-                  mountPath: /data/models
+                  mountPath: /data
                   readOnly: true
                 - mountPath: /dev/shm
                   name: dshm
@@ -203,9 +227,9 @@ spec:
               emptyDir: {}
             - name: output
               emptyDir: {}
-            - hostPath:
-                path: /lustre/test1/huggingface-models
-              name: models
+            - name: models
+              persistentVolumeClaim:
+                claimName: wzf0001
             - name: script
               configMap:
                 name: script
