@@ -1,15 +1,11 @@
-
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: torch-workload-1
+  name: ${JOB_NAME}
 spec:
   backoffLimit: 0
   parallelism: 1
   template:
-    metadata:
-      labels:
-        kueue.x-k8s.io/queue-name: landyliu-ei-h800
     spec:
       affinity:
         nodeAffinity: # Pod调度亲和性
@@ -19,7 +15,7 @@ spec:
               - key: cloud.ebtech.com/gpu # GPU节点的标签
                 operator: In
                 values:
-                - A800_NVLINK_80GB # GPU型号
+                - ${GPU_SPEC}
       restartPolicy: Never
       containers:
         - name: torch
@@ -66,12 +62,12 @@ spec:
             - /workspace/script.sh
           resources:
             requests:
-              cpu: 10
-              memory: 100Gi
+              cpu: "${CPU_RESOURCES_REQS}"
+              memory: "${MEM_RESOURCES_REQS}"
               nvidia.com/gpu: "${GPUS_PER_NODE}"
             limits:
-              cpu: 10
-              memory: 100Gi
+              cpu: "${CPU_RESOURCES_LIMITS}"
+              memory: "${MEM_RESOURCES_LIMITS}"
               nvidia.com/gpu: "${GPUS_PER_NODE}"
           volumeMounts:
             - name: models
