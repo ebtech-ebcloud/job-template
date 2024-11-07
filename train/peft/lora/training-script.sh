@@ -5,6 +5,7 @@ export NCCL_IB_DISABLE=1
 NNODES=${NNODES:-${PET_NNODES}}
 NODE_RANK=${NODE_RANK:-${PET_NODE_RANK}}
 DATASET_TEMPLATE=${DATASET_TEMPLATE:-llama3}
+DEEPSPEED_CONFIG=${DEEPSPEED_CONFIG:-ds_config/z0_profiler.json}
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 	--nnodes $NNODES \
@@ -25,6 +26,7 @@ TRAIN_ARGS="--dataset_dir $DATASET_DIR \
 	--num_train_epochs $EPOCHS \
 	--per_device_train_batch_size $TRAIN_BATCH_SIZE_PER_DEVICE \
 	--report_to $REPORT_TO \
-	--logging_dir $LOGGING_DIR"
+	--logging_dir $LOGGING_DIR \
+	--deepspeed $DEEPSPEED_CONFIG"
 
 torchrun $DISTRIBUTED_ARGS /app/src/train.py $TRAIN_ARGS
