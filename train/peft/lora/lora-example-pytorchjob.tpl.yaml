@@ -36,8 +36,12 @@ spec:
                   value: "${DATASET_TEMPLATE}"
                 - name: TZ
                   value: Asia/Shanghai
-              image: 10.5.1.249/bob-base-image/lora-peft:12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-v0.9.0-pytorch-24.02-py3
-              imagePullPolicy: IfNotPresent
+                - name: REPORT_TO
+                  value: "${REPORT_TO}"
+                - name: LOGGING_DIR
+                  value: "${LOGGING_DIR}"
+              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3
+              imagePullPolicy: Always
               name: pytorch
               resources:
                 limits:
@@ -135,8 +139,12 @@ spec:
                   value: "${DATASET_TEMPLATE}"
                 - name: TZ
                   value: Asia/Shanghai
+                - name: REPORT_TO
+                  value: "${REPORT_TO}"
+                - name: LOGGING_DIR
+                  value: "${LOGGING_DIR}"
               image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3
-              imagePullPolicy: IfNotPresent
+              imagePullPolicy: Always
               name: pytorch
               resources:
                 limits:

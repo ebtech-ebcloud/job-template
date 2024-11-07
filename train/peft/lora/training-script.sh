@@ -23,6 +23,8 @@ TRAIN_ARGS="--dataset_dir $DATASET_DIR \
 	--overwrite_output_dir True \
 	--template $DATASET_TEMPLATE \
 	--num_train_epochs $EPOCHS \
-	--per_device_train_batch_size $TRAIN_BATCH_SIZE_PER_DEVICE"
+	--per_device_train_batch_size $TRAIN_BATCH_SIZE_PER_DEVICE \
+	--report_to $REPORT_TO \
+	--logging_dir $LOGGING_DIR"
 
 torchrun $DISTRIBUTED_ARGS /app/src/train.py $TRAIN_ARGS
