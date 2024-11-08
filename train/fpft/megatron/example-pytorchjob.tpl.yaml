@@ -104,23 +104,8 @@ spec:
               volumeMounts:
                 - name: models
                   mountPath: /data
-                  readOnly: true
                 - mountPath: /dev/shm
                   name: dshm
-                - name: dataset
-                  mountPath: /data/datasets/identity.json
-                  subPath: identity.json
-                  readOnly: true
-                - name: dataset-info
-                  mountPath: /data/datasets/dataset_info.json
-                  subPath: dataset_info.json
-                  readOnly: true
-                - name: hf-cache
-                  mountPath: /root/.cache/huggingface
-                - name: model-cache
-                  mountPath: /root/.cache/modelscope
-                - name: output
-                  mountPath: /app/output
                 - name: megatron-script
                   mountPath: /workspace/run/pretrain_gpt.sh
                   subPath: pretrain_gpt.sh
@@ -255,23 +240,8 @@ spec:
               volumeMounts:
                 - name: models
                   mountPath: /data
-                  readOnly: true
                 - mountPath: /dev/shm
                   name: dshm
-                - name: dataset
-                  mountPath: /data/datasets/identity.json
-                  subPath: identity.json
-                  readOnly: true
-                - name: dataset-info
-                  mountPath: /data/datasets/dataset_info.json
-                  subPath: dataset_info.json
-                  readOnly: true
-                - name: hf-cache
-                  mountPath: /root/.cache/huggingface
-                - name: model-cache
-                  mountPath: /root/.cache/modelscope
-                - name: output
-                  mountPath: /app/output
                 - name: megatron-script
                   mountPath: /workspace/run/pretrain_gpt.sh
                   subPath: pretrain_gpt.sh
