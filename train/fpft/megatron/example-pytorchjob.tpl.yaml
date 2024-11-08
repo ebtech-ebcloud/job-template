@@ -1,0 +1,315 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: kubeflow-megatron-1
+  labels:
+    kueue.x-k8s.io/queue-name: landyliu-ei-h800
+spec:
+  nprocPerNode: "${GPUS_PER_NODE}"
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        spec:
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                    - A800_NVLINK_80GB # GPU型号
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/pretrain_gpt.sh
+              env:
+                - name: MODEL_NAME
+                  value: ${MODEL_NAME}
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: EPOCHS
+                  value: "${EPOCHS}"
+                - name: TRAIN_BATCH_SIZE_PER_DEVICE
+                  value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
+                - name: DATASET_DIR
+                  value: "/data/datasets"
+                - name: DATASET_TEMPLATE
+                  value: "${DATASET_TEMPLATE}"
+                - name: TZ
+                  value: Asia/Shanghai
+                - name: REPORT_TO
+                  value: "${REPORT_TO}"
+                - name: LOGGING_DIR
+                  value: "${LOGGING_DIR}"
+                - name: MICRO_BATCH_SIZE
+                  value: "${MICRO_BATCH_SIZE}"
+                - name: GLOBAL_BATCH_SIZE
+                  value: "${GLOBAL_BATCH_SIZE}"
+                - name: SAVE_INTERVAL
+                  value: "${SAVE_INTERVAL}"
+                - name: TRAIN_ITERS
+                  value: "${TRAIN_ITERS}"
+                - name: EVAL_ITERS
+                  value: "${EVAL_ITERS}"
+                - name: NUM_LAYERS
+                  value: "${NUM_LAYERS}"
+                - name: HIDDEN_SIZE
+                  value: "${HIDDEN_SIZE}"
+                - name: FFN_HIDDEN_SIZE
+                  value: "${FFN_HIDDEN_SIZE}"
+                - name: NUM_ATTENTION_HEADS
+                  value: "${NUM_ATTENTION_HEADS}"
+                - name: SEQ_LENGTH
+                  value: "${SEQ_LENGTH}"
+                - name: MAX_POSITION_EMBEDDINGS
+                  value: "${MAX_POSITION_EMBEDDINGS}"
+                # - name: NCCL_SOCKET_IFNAME
+                #   value: "${NCCL_SOCKET_IFNAME}"
+                - name: DATA_PATH
+                  value: "${DATA_PATH}"
+                # - name: MEGATRON_LOGGING_LEVEL
+                #   value: "${MEGATRON_LOGGING_LEVEL}"
+                - name: TP
+                  value: "${TP}"
+                - name: PP
+                  value: "${PP}"
+                - name: LAYER_PER_VPP
+                  value: "${LAYER_PER_VPP}"
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - name: models
+                  mountPath: /data
+                  readOnly: true
+                - mountPath: /dev/shm
+                  name: dshm
+                - name: dataset
+                  mountPath: /data/datasets/identity.json
+                  subPath: identity.json
+                  readOnly: true
+                - name: dataset-info
+                  mountPath: /data/datasets/dataset_info.json
+                  subPath: dataset_info.json
+                  readOnly: true
+                - name: hf-cache
+                  mountPath: /root/.cache/huggingface
+                - name: model-cache
+                  mountPath: /root/.cache/modelscope
+                - name: output
+                  mountPath: /app/output
+                - name: megatron-script
+                  mountPath: /workspace/run/pretrain_gpt.sh
+                  subPath: pretrain_gpt.sh
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: dataset
+              configMap:
+                name: dataset
+                items:
+                  - key: identity.json
+                    path: identity.json
+            - name: dataset-info
+              configMap:
+                name: dataset-info
+                items:
+                  - key: dataset_info.json
+                    path: dataset_info.json
+            - name: hf-cache
+              emptyDir: {}
+            - name: model-cache
+              emptyDir: {}
+            - name: output
+              emptyDir: {}
+            - name: megatron-script
+              configMap:
+                name: megatron-script
+                defaultMode: 0755
+                items:
+                  - key: pretrain_gpt.sh
+                    path: pretrain_gpt.sh
+            - name: models
+              persistentVolumeClaim:
+                claimName: wzf0001
+    Worker:
+      replicas: ${WORKER_NODES}
+      restartPolicy: Never
+      template:
+        spec:
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                    - A800_NVLINK_80GB # GPU型号
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/pretrain_gpt.sh
+              env:
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: MODEL_NAME
+                  value: ${MODEL_NAME}
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: EPOCHS
+                  value: "${EPOCHS}"
+                - name: TRAIN_BATCH_SIZE_PER_DEVICE
+                  value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
+                - name: DATASET_DIR
+                  value: "/data/datasets"
+                - name: DATASET_TEMPLATE
+                  value: "${DATASET_TEMPLATE}"
+                - name: TZ
+                  value: Asia/Shanghai
+                - name: REPORT_TO
+                  value: "${REPORT_TO}"
+                - name: LOGGING_DIR
+                  value: "${LOGGING_DIR}"
+                - name: MICRO_BATCH_SIZE
+                  value: "${MICRO_BATCH_SIZE}"
+                - name: GLOBAL_BATCH_SIZE
+                  value: "${GLOBAL_BATCH_SIZE}"
+                - name: SAVE_INTERVAL
+                  value: "${SAVE_INTERVAL}"
+                - name: TRAIN_ITERS
+                  value: "${TRAIN_ITERS}"
+                - name: EVAL_ITERS
+                  value: "${EVAL_ITERS}"
+                - name: NUM_LAYERS
+                  value: "${NUM_LAYERS}"
+                - name: HIDDEN_SIZE
+                  value: "${HIDDEN_SIZE}"
+                - name: FFN_HIDDEN_SIZE
+                  value: "${FFN_HIDDEN_SIZE}"
+                - name: NUM_ATTENTION_HEADS
+                  value: "${NUM_ATTENTION_HEADS}"
+                - name: SEQ_LENGTH
+                  value: "${SEQ_LENGTH}"
+                - name: MAX_POSITION_EMBEDDINGS
+                  value: "${MAX_POSITION_EMBEDDINGS}"
+                # - name: NCCL_SOCKET_IFNAME
+                #   value: "${NCCL_SOCKET_IFNAME}"
+                - name: DATA_PATH
+                  value: "${DATA_PATH}"
+                # - name: MEGATRON_LOGGING_LEVEL
+                  # value: "${MEGATRON_LOGGING_LEVEL}"
+                - name: TP
+                  value: "${TP}"
+                - name: PP
+                  value: "${PP}"
+                - name: LAYER_PER_VPP
+                  value: "${LAYER_PER_VPP}"
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - name: models
+                  mountPath: /data
+                  readOnly: true
+                - mountPath: /dev/shm
+                  name: dshm
+                - name: dataset
+                  mountPath: /data/datasets/identity.json
+                  subPath: identity.json
+                  readOnly: true
+                - name: dataset-info
+                  mountPath: /data/datasets/dataset_info.json
+                  subPath: dataset_info.json
+                  readOnly: true
+                - name: hf-cache
+                  mountPath: /root/.cache/huggingface
+                - name: model-cache
+                  mountPath: /root/.cache/modelscope
+                - name: output
+                  mountPath: /app/output
+                - name: megatron-script
+                  mountPath: /workspace/run/pretrain_gpt.sh
+                  subPath: pretrain_gpt.sh
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: dataset
+              configMap:
+                name: dataset
+                items:
+                  - key: identity.json
+                    path: identity.json
+            - name: dataset-info
+              configMap:
+                name: dataset-info
+                items:
+                  - key: dataset_info.json
+                    path: dataset_info.json
+            - name: hf-cache
+              emptyDir: {}
+            - name: model-cache
+              emptyDir: {}
+            - name: output
+              emptyDir: {}
+            - name: megatron-script
+              configMap:
+                name: megatron-script
+                defaultMode: 0755
+                items:
+                  - key: pretrain_gpt.sh
+                    path: pretrain_gpt.sh
+            - name: models
+              persistentVolumeClaim:
+                claimName: wzf0001
+
+  runPolicy:
+    cleanPodPolicy: None
+    suspend: false
