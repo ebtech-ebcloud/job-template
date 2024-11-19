@@ -1,0 +1,138 @@
+
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: kubeflow-ib-perftest-1
+spec:
+  nprocPerNode: "${GPUS_PER_NODE}"
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        spec:
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                    - A800_NVLINK_80GB # GPU型号
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/ib_perf_test.sh
+              env:
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /workspace/run/ib_perf_test.sh
+                  name: ib-perf-test-script
+                  subPath: ib_perf_test.sh
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: ib-perf-test-script
+              configMap:
+                name: ib-perf-test-script
+                defaultMode: 0755
+                items:
+                  - key: ib_perf_test.sh
+                    path: ib_perf_test.sh
+    Worker:
+      replicas: ${WORKER_NODES}
+      restartPolicy: Never
+      template:
+        spec:
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                    - A800_NVLINK_80GB # GPU型号
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/ib_perf_test.sh
+              env:
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /workspace/run/ib_perf_test.sh
+                  name: ib-perf-test-script
+                  subPath: ib_perf_test.sh
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: ib-perf-test-script
+              configMap:
+                name: ib-perf-test-script
+                defaultMode: 0755
+                items:
+                  - key: ib_perf_test.sh
+                    path: ib_perf_test.sh
+
+  runPolicy:
+    cleanPodPolicy: None
+    suspend: false
