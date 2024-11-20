@@ -50,6 +50,10 @@ export WANDB_PROJECT=my-awesome-project
 
 执行 `make script`, 向集群提交示例训练代码。具体的训练代码可以参考 `training-script.sh`。
 
+## 准备存储卷
+
+执行 `kubectl apply -f pvc.yaml`, 向集群提交示例存储卷，用于存储训练结束的模型文件。
+
 ## 提交单机训练任务
 
 ### 单卡训练任务
