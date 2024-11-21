@@ -1,0 +1,83 @@
+apiVersion: kubeflow.org/v2beta1
+# apiVersion: kubeflow.org/v1
+kind: MPIJob
+metadata:
+  name: mpijob-nccl-test
+spec:
+  slotsPerWorker: ${GPUS_PER_NODE}
+  runPolicy:
+    cleanPodPolicy: Running
+  mpiReplicaSpecs:
+    Launcher:
+      replicas: 1
+      template:
+        spec:
+          containers:
+            - image: 10.5.1.249/bob-base-image/nccl-tests:12.2.2-cudnn8-devel-ubuntu20.04-nccl2.21.5-1-2ff05b2
+              name: nccl
+              env:
+                - name: OMPI_ALLOW_RUN_AS_ROOT
+                  value: "1"
+                - name: OMPI_ALLOW_RUN_AS_ROOT_CONFIRM
+                  value: "1"
+              command: ["/bin/bash", "-c"]
+              args: [
+                  "mpirun \
+                  -np ${NNODES} \
+                  -bind-to none \
+                  -x LD_LIBRARY_PATH \
+                  -x NCCL_SOCKET_IFNAME=eth0 \
+                  /opt/nccl_tests/build/all_reduce_perf -b 512M -e 8G -f 2 -g 1
+                  ",
+                ]
+              resources:
+                requests:
+                  cpu: 2
+                  memory: 128Mi
+                limits:
+                  cpu: 2
+                  memory: 128Mi
+          enableServiceLinks: false
+          automountServiceAccountToken: false
+    Worker:
+      replicas: ${NNODES}
+      template:
+        spec:
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: cloud.ebtech.com/gpu # GPU节点的标签
+                        operator: In
+                        values:
+                          - ${GPU_SPEC} # GPU型号
+          containers:
+            - image: 10.5.1.249/bob-base-image/nccl-tests:12.2.2-cudnn8-devel-ubuntu20.04-nccl2.21.5-1-2ff05b2
+              name: nccl
+              resources:
+                requests:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: ${GPUS_PER_NODE}
+                  rdma/hca_shared_devices_ib: ${GPUS_PER_NODE}
+                limits:
+                  cpu: 10
+                  memory: 100Gi
+                  nvidia.com/gpu: ${GPUS_PER_NODE}
+                  rdma/hca_shared_devices_ib: ${GPUS_PER_NODE}
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+                    # - SYS_RESOURCE
+          volumes:
+            - emptyDir:
+                medium: Memory
+              name: dshm
+
+          enableServiceLinks: false
+          automountServiceAccountToken: false
