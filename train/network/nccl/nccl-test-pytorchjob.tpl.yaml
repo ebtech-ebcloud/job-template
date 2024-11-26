@@ -1,0 +1,267 @@
+
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: kubeflow-nccl-test-3
+spec:
+  nprocPerNode: "${GPUS_PER_NODE}"
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        spec:
+          subdomain: kubeflow-nccl-test-3
+          # initContainers:
+          #   - name: init-pytorch-custom
+          #     image: "${IMAGE_NAME}"
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |
+          #         mkdir -p /root/.ssh
+          #         ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
+          #         cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+          #         cp -r /root/.ssh/* /ssh-keys/
+          #     volumeMounts:
+          #       - mountPath: /ssh-keys
+          #         name: ssh-keys
+          #     resources:
+          #       limits:
+          #         cpu: 1
+          #         memory: 1Gi
+          #       requests:
+          #         cpu: 1
+          #         memory: 1Gi
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                    - A800_NVLINK_80GB # GPU型号
+                  - key: kubernetes.io/hostname # 主机名
+                    operator: In # NotIn
+                    values:
+                    - hgx-091
+                    # - hgx-055 # 不调度到这台服务器
+                    # - hgx-028
+                    # - hgx-030
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/nccl_test.sh
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - |
+                        service ssh start
+                        cp /root/.ssh/shared-keys/* /root/.ssh/
+                        chmod 600 /root/.ssh/id_rsa
+                        chmod 644 /root/.ssh/authorized_keys
+              ports:
+                - containerPort: 22
+                  name: ssh
+                # - containerPort: 23456
+                #   name: nccl
+              env:
+                - name: NNODES
+                  value: "${NNODES}"
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /workspace/run/nccl_test.sh
+                  name: nccl-test-script
+                  subPath: nccl_test.sh
+                - mountPath: /root/.ssh/shared-keys/
+                  name: ssh-keys
+                  readOnly: true
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: nccl-test-script
+              configMap:
+                name: nccl-test-script
+                defaultMode: 0755
+                items:
+                  - key: nccl_test.sh
+                    path: nccl_test.sh
+            - name: ssh-keys
+              configMap:
+                name: ssh-keys
+                defaultMode: 0600
+    Worker:
+      replicas: ${WORKER_NODES}
+      restartPolicy: Never
+      template:
+        spec:
+          subdomain: kubeflow-nccl-test-3
+          # initContainers:
+          #   - name: init-pytorch-custom
+          #     image: "${IMAGE_NAME}"
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |
+          #         mkdir -p /root/.ssh
+          #         until [ -f /ssh-keys/id_rsa ]; do
+          #           echo "waiting for ssh key"
+          #           sleep 2
+          #         done
+          #         cp -r /ssh-keys/* /root/.ssh/
+          #     volumeMounts:
+          #       - mountPath: /ssh-keys
+          #         name: ssh-keys
+          #     resources:
+          #       limits:
+          #         cpu: 1
+          #         memory: 1Gi
+          #       requests:
+          #         cpu: 1
+          #         memory: 1Gi
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                    - A800_NVLINK_80GB # GPU型号
+                  - key: kubernetes.io/hostname # 主机名
+                    operator: In # NotIn
+                    values:
+                    - hgx-096
+                    # - hgx-055 # 不调度到这台服务器
+                    # - hgx-028
+                    # - hgx-030
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/nccl_test.sh
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - |
+                        service ssh start
+                        cp /root/.ssh/shared-keys/* /root/.ssh/
+                        chmod 600 /root/.ssh/id_rsa
+                        chmod 644 /root/.ssh/authorized_keys
+              ports:
+                - containerPort: 22
+                  name: ssh
+                # - containerPort: 23456
+                #   name: nccl
+              env:
+                - name: NNODES
+                  value: "${NNODES}"
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /workspace/run/nccl_test.sh
+                  name: nccl-test-script
+                  subPath: nccl_test.sh
+                - mountPath: /root/.ssh/shared-keys/
+                  name: ssh-keys
+                  readOnly: true
+                - name: models
+                  mountPath: /data
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: nccl-test-script
+              configMap:
+                name: nccl-test-script
+                defaultMode: 0755
+                items:
+                  - key: nccl_test.sh
+                    path: nccl_test.sh
+            - name: ssh-keys
+              configMap:
+                name: ssh-keys
+                defaultMode: 0600
+            - name: models
+              persistentVolumeClaim:
+                claimName: wzf0001
+  runPolicy:
+    cleanPodPolicy: None
+    suspend: false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubeflow-nccl-test-3
+spec:
+  clusterIP: None
+  selector:
+    pytorch-job-name: kubeflow-nccl-test-3
+  ports:
+  - port: 22
+    name: ssh
+  # - port: 23456
+  #   name: nccl
