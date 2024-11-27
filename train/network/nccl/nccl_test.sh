@@ -45,12 +45,12 @@ fi
 
 # concat to create worker hostnames
 hostname_prefix=${HOSTNAME%%-master-0}
-# SLOT_PER_NODE=${GPUS_PER_NODE}
-# N_PROCS=${WORLD_SIZE}
-# GPUS_PER_SLOT=1
-SLOT_PER_NODE=1
-N_PROCS=${NNODES}
-GPUS_PER_SLOT=${GPUS_PER_NODE}
+SLOT_PER_NODE=${GPUS_PER_NODE}
+N_PROCS=${WORLD_SIZE}
+GPUS_PER_SLOT=1
+# SLOT_PER_NODE=1
+# N_PROCS=${NNODES}
+# GPUS_PER_SLOT=${GPUS_PER_NODE}
 worker_hostnames="localhost:${SLOT_PER_NODE},"
 for i in $(seq 0 $((NWORKERS - 1))); do
     worker_hostnames="${worker_hostnames}${hostname_prefix}-worker-${i}:${SLOT_PER_NODE},"
@@ -137,11 +137,10 @@ if [[ $(hostname) == *"master"* ]]; then
     -x NCCL_TOPO_DUMP_FILE=/root/nccl-tests/nccl-topo.xml \
     -x NCCL_NVB_DISABLE=0 \
     -x NCCL_P2P_LEVEL=PXB \
-    -x NCCL_IB_HCA=mlx5_4,mlx5_10 \
     /root/nccl-tests/build/sendrecv_perf -b 512M -e 2G -f 2 -g ${GPUS_PER_SLOT} -w 50 -n 50
 
-    echo "NCCL TOPO FILE:"
-    cat /root/nccl-tests/nccl-topo.xml
+    # echo "NCCL TOPO FILE:"
+    # cat /root/nccl-tests/nccl-topo.xml
 fi
 
 if [[ $(hostname) == *"worker"* ]]; then
@@ -161,6 +160,7 @@ if [[ $(hostname) == *"worker"* ]]; then
     echo "Master exited, now exit"
 fi
 
+    # -x NCCL_IB_HCA=mlx5_4,mlx5_10 \
     # -x NCCL_IB_GID_INDEX=3 \
 # -x NCCL_IB_SL=0 -x NCCL_IB_TC=0 
 # -x LD_LIBRARY_PATH -x PATH \
