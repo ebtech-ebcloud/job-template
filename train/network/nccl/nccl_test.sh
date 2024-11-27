@@ -2,31 +2,12 @@
 
 # apt-get update && apt-get install -y openssh-client iputils-ping telnet openssh-server
 
-# export NCCL_DEBUG=INFO
-# export NCCL_DEBUG_SUBSYS=ALL
-# export NCCL_IB_DISABLE=0
-# export NCCL_NET_GDR_LEVEL=2
-# export NCCL_IB_GID_INDEX=3
-
-# export NCCL_SOCKET_IFNAME=eth0  # 指定网络接口
-# export NCCL_IB_HCA=mlx5_10       # 如果使用 InfiniBand
-
 export WORLD_SIZE=${WORLD_SIZE}
 export RANK=${RANK}
 # export NNODES=${WORLD_SIZE}
 export NRANKS=${WORLD_SIZE}
 export NODE_RANK=${RANK}
 export NPROC_PER_NODE=${PET_NPROC_PER_NODE}
-
-
-# export NCCL_IB_SL=0          # 使用 SL 0，因为只启用了 VL0-3
-# export NCCL_IB_TC=0          # Traffic Class 也应该设为 0
-
-# export NCCL_IB_GDR_LEVEL=2
-# export NCCL_IB_QPS_PER_CONNECTION=4
-
-# export NCCL_IB_TIMEOUT=23
-# export NCCL_IB_RETRY_CNT=7
 
 printenv
 
@@ -36,12 +17,6 @@ if [ $NWORKERS -le 0 ]; then
     echo "for distributed nccl-tests, NNODES must be greater than 1"
     exit 1
 fi
-
-
-# sleep 36000
-
-# /root/nccl-tests/build/all_reduce_perf -b 512M -e 8G -f 2 -g ${GPUS_PER_NODE}
-
 
 # concat to create worker hostnames
 hostname_prefix=${HOSTNAME%%-master-0}
@@ -57,29 +32,12 @@ for i in $(seq 0 $((NWORKERS - 1))); do
 done
 echo "Worker hostnames: ${worker_hostnames}"
 
+# /root/nccl-tests/build/all_reduce_perf -b 512M -e 8G -f 2 -g ${GPUS_PER_NODE}
 # mpirun -H ${worker_hostnames} -np ${NNODES} /root/nccl-tests/build/all_reduce_perf -b 512M -e 8G -f 2 -g ${GPUS_PER_NODE}
 
 # mpirun --allow-run-as-root --bind-to socket -H localhost,kubeflow-nccl-test-3-worker-0 -np 2 \
 # -x NCCL_ALGO=RING -x NCCL_IB_SL=0 -x NCCL_IB_TC=0 -x NCCL_DEBUG=INFO -x NCCL_DEBUG_SUBSYS=ALL -x NCCL_IB_GDR_LEVEL=2 -x NCCL_IB_QPS_PER_CONNECTION=1 \
 # /root/nccl-tests/build/all_reduce_perf -b 512M -e 1G -f 2 -g 8
-
-
-# -x NCCL_DEBUG=INFO -x NCCL_DEBUG_SUBSYS=ALL \
-# mpirun --allow-run-as-root --bind-to socket --map-by slot -H localhost:1,kubeflow-nccl-test-3-worker-0:1 -np 2 \
-# -x NCCL_ALGO=RING -x NCCL_IB_SL=0 -x NCCL_IB_TC=0 \
-# -x NCCL_IB_GDR_LEVEL=2 -x NCCL_IB_QPS_PER_CONNECTION=4 \
-# -x NCCL_IB_GID_INDEX=3 \
-# -x NCCL_IB_DISABLE=0 \
-# -x LD_LIBRARY_PATH -x PATH \
-# -x CUDA_VISIBLE_DEVICES=2 -x NCCL_IB_HCA=mlx5_4 \
-# -mca coll_hcoll_enable 0 \
-# -mca pml ob1 \
-# -mca btl_tcp_if_include eth0 \
-# -mca btl ^openib \
-# /root/nccl-tests/build/all_reduce_perf -b 512M -e 2G -f 2 -g 1 -w 50 -n 50 > out.log
-
-# -x CUDA_VISIBLE_DEVICES=4 -x NCCL_IB_HCA=mlx5_9 \
-# -x NCCL_CROSS_NIC=1 \
 
 # mpirun --allow-run-as-root --bind-to none --map-by slot -H localhost:8,kubeflow-nccl-test-3-worker-0:8 -np 16 \
 # -x NCCL_DEBUG=INFO -x NCCL_DEBUG_SUBSYS=ALL \
@@ -88,9 +46,6 @@ echo "Worker hostnames: ${worker_hostnames}"
 # -x NCCL_IB_GID_INDEX=3 \
 # -x NCCL_IB_DISABLE=0 \
 # /root/nccl-tests/build/sendrecv_perf -b 512M -e 2G -f 2 -g 1 -w 50 -n 500
-
-
-
 
 
 # run on master node
@@ -123,9 +78,12 @@ if [[ $(hostname) == *"master"* ]]; then
 
     echo "All workers are ready, now start testing..."
 
+    # -x NCCL_DEBUG=INFO \
+    # -x NCCL_DEBUG_SUBSYS=P2P,NET,GRAPH \
     mpirun --allow-run-as-root --bind-to none --map-by slot -H ${worker_hostnames} -np ${N_PROCS} \
-    -x NCCL_DEBUG=INFO \
-    -x NCCL_DEBUG_SUBSYS=P2P,NET,GRAPH \
+    -mca pml ob1 \
+    -mca btl_tcp_if_include eth0 \
+    -mca btl ^openib \
     -x NCCL_ALGO=RING \
     -x NCCL_NET_GDR_LEVEL=PXB \
     -x NCCL_IB_QPS_PER_CONNECTION=4 \
@@ -137,7 +95,7 @@ if [[ $(hostname) == *"master"* ]]; then
     -x NCCL_TOPO_DUMP_FILE=/root/nccl-tests/nccl-topo.xml \
     -x NCCL_NVB_DISABLE=0 \
     -x NCCL_P2P_LEVEL=PXB \
-    /root/nccl-tests/build/sendrecv_perf -b 512M -e 2G -f 2 -g ${GPUS_PER_SLOT} -w 50 -n 50
+    /root/nccl-tests/build/sendrecv_perf -b 128M -e 512M -f 2 -g ${GPUS_PER_SLOT} -w 50 -n 50
 
     # echo "NCCL TOPO FILE:"
     # cat /root/nccl-tests/nccl-topo.xml

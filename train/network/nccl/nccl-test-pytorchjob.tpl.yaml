@@ -2,7 +2,7 @@
 apiVersion: kubeflow.org/v1
 kind: PyTorchJob
 metadata:
-  name: kubeflow-nccl-test-3
+  name: "${JOB_NAME}"
 spec:
   nprocPerNode: "${GPUS_PER_NODE}"
   pytorchReplicaSpecs:
@@ -11,28 +11,7 @@ spec:
       restartPolicy: Never
       template:
         spec:
-          subdomain: kubeflow-nccl-test-3
-          # initContainers:
-          #   - name: init-pytorch-custom
-          #     image: "${IMAGE_NAME}"
-          #     command:
-          #       - /bin/bash
-          #       - -c
-          #       - |
-          #         mkdir -p /root/.ssh
-          #         ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
-          #         cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
-          #         cp -r /root/.ssh/* /ssh-keys/
-          #     volumeMounts:
-          #       - mountPath: /ssh-keys
-          #         name: ssh-keys
-          #     resources:
-          #       limits:
-          #         cpu: 1
-          #         memory: 1Gi
-          #       requests:
-          #         cpu: 1
-          #         memory: 1Gi
+          # subdomain: "${JOB_NAME}"
           affinity:
             nodeAffinity: # Pod调度亲和性
               requiredDuringSchedulingIgnoredDuringExecution:
@@ -42,10 +21,10 @@ spec:
                     operator: In
                     values:
                     - A800_NVLINK_80GB # GPU型号
-                  - key: kubernetes.io/hostname # 主机名
-                    operator: In # NotIn
-                    values:
-                    - hgx-091
+                  # - key: kubernetes.io/hostname # 主机名
+                  #   operator: In # NotIn
+                  #   values:
+                  #   - hgx-091
                     # - hgx-055 # 不调度到这台服务器
                     # - hgx-028
                     # - hgx-030
@@ -68,8 +47,6 @@ spec:
               ports:
                 - containerPort: 22
                   name: ssh
-                # - containerPort: 23456
-                #   name: nccl
               env:
                 - name: NNODES
                   value: "${NNODES}"
@@ -128,30 +105,7 @@ spec:
       restartPolicy: Never
       template:
         spec:
-          subdomain: kubeflow-nccl-test-3
-          # initContainers:
-          #   - name: init-pytorch-custom
-          #     image: "${IMAGE_NAME}"
-          #     command:
-          #       - /bin/bash
-          #       - -c
-          #       - |
-          #         mkdir -p /root/.ssh
-          #         until [ -f /ssh-keys/id_rsa ]; do
-          #           echo "waiting for ssh key"
-          #           sleep 2
-          #         done
-          #         cp -r /ssh-keys/* /root/.ssh/
-          #     volumeMounts:
-          #       - mountPath: /ssh-keys
-          #         name: ssh-keys
-          #     resources:
-          #       limits:
-          #         cpu: 1
-          #         memory: 1Gi
-          #       requests:
-          #         cpu: 1
-          #         memory: 1Gi
+          # subdomain: "${JOB_NAME}"
           affinity:
             nodeAffinity: # Pod调度亲和性
               requiredDuringSchedulingIgnoredDuringExecution:
@@ -161,10 +115,10 @@ spec:
                     operator: In
                     values:
                     - A800_NVLINK_80GB # GPU型号
-                  - key: kubernetes.io/hostname # 主机名
-                    operator: In # NotIn
-                    values:
-                    - hgx-096
+                  # - key: kubernetes.io/hostname # 主机名
+                  #   operator: In # NotIn
+                  #   values:
+                  #   - hgx-096
                     # - hgx-055 # 不调度到这台服务器
                     # - hgx-028
                     # - hgx-030
@@ -187,8 +141,6 @@ spec:
               ports:
                 - containerPort: 22
                   name: ssh
-                # - containerPort: 23456
-                #   name: nccl
               env:
                 - name: NNODES
                   value: "${NNODES}"
@@ -225,8 +177,8 @@ spec:
                 - mountPath: /root/.ssh/shared-keys/
                   name: ssh-keys
                   readOnly: true
-                - name: models
-                  mountPath: /data
+                # - name: models
+                #   mountPath: /data
           hostIPC: true
           volumes:
             - name: dshm
@@ -244,9 +196,9 @@ spec:
               configMap:
                 name: ssh-keys
                 defaultMode: 0600
-            - name: models
-              persistentVolumeClaim:
-                claimName: wzf0001
+            # - name: models
+            #   persistentVolumeClaim:
+            #     claimName: wzf0001
   runPolicy:
     cleanPodPolicy: None
     suspend: false
@@ -255,13 +207,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubeflow-nccl-test-3
+  name: "${JOB_NAME}"
 spec:
   clusterIP: None
   selector:
-    pytorch-job-name: kubeflow-nccl-test-3
+    pytorch-job-name: "${JOB_NAME}"
   ports:
   - port: 22
     name: ssh
-  # - port: 23456
-  #   name: nccl

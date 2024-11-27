@@ -1,7 +1,7 @@
 
 #! /bin/bash
 
-
+export JOB_NAME=${JOB_NAME:-kubeflow-nccl-test-3}
 export NNODES=${NNODES:-2}
 export WORKER_NODES=$((NNODES - 1))
 export GPUS_PER_NODE=${GPUS_PER_NODE:-4}
@@ -11,4 +11,4 @@ export CPUS_PER_NODE=${CPUS_PER_NODE:-$((${GPUS_PER_NODE} * 10))}
 export MEMORY_PER_NODE=${MEMORY_PER_NODE:-$((${GPUS_PER_NODE} * 100))}Gi
 export IMAGE_NAME=${IMAGE_NAME:-10.5.1.249/bob-base-image/nccl-test:v2.13.8-nccl2.23.4-ibperf24.07.0-cuda12.0.1-cudnn8-devel-ubuntu20.04-1}
 
-envsubst '$NNODES $WORKER_NODES $GPUS_PER_NODE $CPUS_PER_NODE $MEMORY_PER_NODE $IMAGE_NAME' < nccl-test-pytorchjob.tpl.yaml | kubectl replace --force -f -
+envsubst '$JOB_NAME $NNODES $WORKER_NODES $GPUS_PER_NODE $CPUS_PER_NODE $MEMORY_PER_NODE $IMAGE_NAME' < nccl-test-pytorchjob.tpl.yaml | kubectl replace --force -f -
