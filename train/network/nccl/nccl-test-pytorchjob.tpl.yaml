@@ -24,7 +24,8 @@ spec:
                   # - key: kubernetes.io/hostname # 主机名
                   #   operator: In # NotIn
                   #   values:
-                  #   - hgx-091
+                  #   - hgx-029
+                    # - hgx-091
                     # - hgx-055 # 不调度到这台服务器
                     # - hgx-028
                     # - hgx-030
@@ -118,6 +119,8 @@ spec:
                   # - key: kubernetes.io/hostname # 主机名
                   #   operator: In # NotIn
                   #   values:
+                  #   - hgx-028
+                  #   - hgx-091
                   #   - hgx-096
                     # - hgx-055 # 不调度到这台服务器
                     # - hgx-028

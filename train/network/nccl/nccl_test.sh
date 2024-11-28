@@ -79,8 +79,11 @@ if [[ $(hostname) == *"master"* ]]; then
     echo "All workers are ready, now start testing..."
 
     # -x NCCL_DEBUG=INFO \
-    # -x NCCL_DEBUG_SUBSYS=P2P,NET,GRAPH \
+    # -x NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH \
+    # use NCCL_ALGO=RING to test the real network bandwidth, TREE method will do some tricks to bus bandwidth.
+    # -x NCCL_IGNORE_CPU_AFFINITY=1 \
     mpirun --allow-run-as-root --bind-to none --map-by slot -H ${worker_hostnames} -np ${N_PROCS} \
+    -mca coll_hcoll_enable 0 \
     -mca pml ob1 \
     -mca btl_tcp_if_include eth0 \
     -mca btl ^openib \
@@ -95,7 +98,7 @@ if [[ $(hostname) == *"master"* ]]; then
     -x NCCL_TOPO_DUMP_FILE=/root/nccl-tests/nccl-topo.xml \
     -x NCCL_NVB_DISABLE=0 \
     -x NCCL_P2P_LEVEL=PXB \
-    /root/nccl-tests/build/sendrecv_perf -b 128M -e 512M -f 2 -g ${GPUS_PER_SLOT} -w 50 -n 50
+    /root/nccl-tests/build/all_reduce_perf -b 512M -e 2G -f 2 -g ${GPUS_PER_SLOT} -w 50 -n 50
 
     # echo "NCCL TOPO FILE:"
     # cat /root/nccl-tests/nccl-topo.xml

@@ -4,7 +4,7 @@
 export JOB_NAME=${JOB_NAME:-kubeflow-nccl-test-3}
 export NNODES=${NNODES:-2}
 export WORKER_NODES=$((NNODES - 1))
-export GPUS_PER_NODE=${GPUS_PER_NODE:-4}
+export GPUS_PER_NODE=${GPUS_PER_NODE:-2}
 # default to 10*GPUS_PER_NODE
 export CPUS_PER_NODE=${CPUS_PER_NODE:-$((${GPUS_PER_NODE} * 10))}
 # default to 100*GPUS_PER_NODE
