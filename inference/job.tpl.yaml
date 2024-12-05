@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  labels:
+    app: inference
+spec:
+  backoffLimit: 0
+  parallelism: 1
+  template:
+    metadata:
+      name: inference
+      labels:
+        app: inference
+    spec:
+      affinity:
+        nodeAffinity: # Pod调度亲和性
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                      - ${GPU_SPEC}
+      containers:
+        - name: vllm
+          image: 10.5.1.249/bob/vllm-openai-offline:stable
+          command:
+            - python3
+            - scripts.py
+          args:
+            - --model
+            - /data/models/${MODEL_NAME}
+            - --lora_adapter
+            - /adapters/${ADAPTER_NAME}
+            - --prompt_file
+            - /prompts/sample.txt
+            - --temperature
+            - "0.7"
+            - --top_p
+            - "0.9"
+          resources:
+            requests:
+              cpu: "${CPU_RESOURCES_REQS}"
+              memory: "${MEM_RESOURCES_REQS}"
+              nvidia.com/gpu: "${GPUS_PER_NODE}"
+            limits:
+              cpu: "${CPU_RESOURCES_LIMITS}"
+              memory: "${MEM_RESOURCES_LIMITS}"
+              nvidia.com/gpu: "${GPUS_PER_NODE}"
+          volumeMounts:
+            - name: adapters
+              mountPath: /adapters
+            - name: data
+              mountPath: /data
+            - name: sample-prompts
+              mountPath: /prompts
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: wzf0001
+        - name: adapters
+          persistentVolumeClaim:
+            claimName: example-output
+        - name: sample-prompts
+          configMap:
+            name: sample-prompts
+            items:
+              - key: sample.txt
+                path: sample.txt
+      restartPolicy: Never
+      dnsPolicy: ClusterFirst

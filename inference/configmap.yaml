@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  sample.txt: |-
+    你是谁？
+    你由谁开发？
+    你是由 Meta 开发的吗？
+    你是 Llama 吗？
+kind: ConfigMap
+metadata:
+  name: sample-prompts

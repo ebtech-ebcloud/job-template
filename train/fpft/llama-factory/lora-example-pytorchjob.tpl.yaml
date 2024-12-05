@@ -18,7 +18,7 @@ spec:
                       - key: cloud.ebtech.com/gpu # GPU节点的标签
                         operator: In
                         values:
-                        - ${GPU_SPEC}
+                          - ${GPU_SPEC}
           containers:
             - command:
                 - bash
@@ -37,8 +37,6 @@ spec:
                   value: "${EPOCHS}"
                 - name: TRAIN_BATCH_SIZE_PER_DEVICE
                   value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
-                - name: DATASET_DIR
-                  value: "/data/datasets"
                 - name: DATASET_TEMPLATE
                   value: "${DATASET_TEMPLATE}"
                 - name: TZ
@@ -47,7 +45,7 @@ spec:
                   value: "${REPORT_TO}"
                 - name: LOGGING_DIR
                   value: "${LOGGING_DIR}"
-              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed
+              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed-flash-attn
               imagePullPolicy: Always
               name: pytorch
               resources:
@@ -71,14 +69,6 @@ spec:
                   readOnly: true
                 - mountPath: /dev/shm
                   name: dshm
-                - name: dataset
-                  mountPath: /data/datasets/identity.json
-                  subPath: identity.json
-                  readOnly: true
-                - name: dataset-info
-                  mountPath: /data/datasets/dataset_info.json
-                  subPath: dataset_info.json
-                  readOnly: true
                 - name: hf-cache
                   mountPath: /root/.cache/huggingface
                 - name: model-cache
@@ -93,31 +83,18 @@ spec:
               emptyDir:
                 medium: Memory
                 sizeLimit: 80Gi
-            - name: dataset
-              configMap:
-                name: dataset
-                items:
-                  - key: identity.json
-                    path: identity.json
-            - name: dataset-info
-              configMap:
-                name: dataset-info
-                items:
-                  - key: dataset_info.json
-                    path: dataset_info.json
             - name: hf-cache
               emptyDir: {}
             - name: model-cache
               emptyDir: {}
             - name: output
-              persistentVolumeClaim:
-                claimName: example-output
+              emptyDir: {}
             - name: models
               persistentVolumeClaim:
                 claimName: wzf0001
             - name: script
               configMap:
-                name: script
+                name: llama-factory-lora-pt
                 defaultMode: 0755
                 items:
                   - key: script.sh
@@ -135,7 +112,7 @@ spec:
                       - key: cloud.ebtech.com/gpu # GPU节点的标签
                         operator: In
                         values:
-                        - ${GPU_SPEC}
+                          - ${GPU_SPEC}
           containers:
             - command:
                 - bash
@@ -154,8 +131,6 @@ spec:
                   value: "${EPOCHS}"
                 - name: TRAIN_BATCH_SIZE_PER_DEVICE
                   value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
-                - name: DATASET_DIR
-                  value: "/data/datasets"
                 - name: DATASET_TEMPLATE
                   value: "${DATASET_TEMPLATE}"
                 - name: TZ
@@ -164,7 +139,7 @@ spec:
                   value: "${REPORT_TO}"
                 - name: LOGGING_DIR
                   value: "${LOGGING_DIR}"
-              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed
+              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed-flash-attn
               imagePullPolicy: Always
               name: pytorch
               resources:
@@ -188,14 +163,6 @@ spec:
                   readOnly: true
                 - mountPath: /dev/shm
                   name: dshm
-                - name: dataset
-                  mountPath: /data/datasets/identity.json
-                  subPath: identity.json
-                  readOnly: true
-                - name: dataset-info
-                  mountPath: /data/datasets/dataset_info.json
-                  subPath: dataset_info.json
-                  readOnly: true
                 - name: hf-cache
                   mountPath: /root/.cache/huggingface
                 - name: model-cache
@@ -210,28 +177,18 @@ spec:
               emptyDir:
                 medium: Memory
                 sizeLimit: 80Gi
-            - name: dataset
-              configMap:
-                name: dataset
-                items:
-                  - key: identity.json
-                    path: identity.json
-            - name: dataset-info
-              configMap:
-                name: dataset-info
-                items:
-                  - key: dataset_info.json
-                    path: dataset_info.json
             - name: hf-cache
               emptyDir: {}
             - name: model-cache
+              emptyDir: {}
+            - name: output
               emptyDir: {}
             - name: models
               persistentVolumeClaim:
                 claimName: wzf0001
             - name: script
               configMap:
-                name: script
+                name: llama-factory-lora-pt
                 defaultMode: 0755
                 items:
                   - key: script.sh

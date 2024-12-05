@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: example-output # 存储卷的名称
+spec:
+  accessModes:
+  - ReadWriteMany # 存储卷的读写模式
+  resources:
+    requests:
+      storage: 50Gi # 存储卷的容量大小
+  storageClassName: shared-nvme-cn-beijing2 # 创建存储卷使用的StorageClass的名字
