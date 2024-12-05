@@ -1,0 +1,199 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: ${JOB_NAME}
+spec:
+  nprocPerNode: "${GPUS_PER_NODE}"
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: cloud.ebtech.com/gpu # GPU节点的标签
+                        operator: In
+                        values:
+                          - ${GPU_SPEC}
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/script.sh
+              env:
+                - name: MODEL_NAME
+                  value: ${MODEL_NAME}
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: EPOCHS
+                  value: "${EPOCHS}"
+                - name: TRAIN_BATCH_SIZE_PER_DEVICE
+                  value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
+                - name: DATASET_TEMPLATE
+                  value: "${DATASET_TEMPLATE}"
+                - name: TZ
+                  value: Asia/Shanghai
+                - name: REPORT_TO
+                  value: "${REPORT_TO}"
+                - name: LOGGING_DIR
+                  value: "${LOGGING_DIR}"
+              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed-flash-attn
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: "${CPU_RESOURCES_LIMITS}"
+                  memory: "${MEM_RESOURCES_LIMITS}"
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
+                requests:
+                  cpu: "${CPU_RESOURCES_REQS}"
+                  memory: "${MEM_RESOURCES_REQS}"
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - name: models
+                  mountPath: /data
+                  readOnly: true
+                - mountPath: /dev/shm
+                  name: dshm
+                - name: hf-cache
+                  mountPath: /root/.cache/huggingface
+                - name: model-cache
+                  mountPath: /root/.cache/modelscope
+                - name: output
+                  mountPath: /app/output
+                - name: script
+                  mountPath: /workspace
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: hf-cache
+              emptyDir: {}
+            - name: model-cache
+              emptyDir: {}
+            - name: output
+              emptyDir: {}
+            - name: models
+              persistentVolumeClaim:
+                claimName: wzf0001
+            - name: script
+              configMap:
+                name: llama-factory-lora-pt
+                defaultMode: 0755
+                items:
+                  - key: script.sh
+                    path: script.sh
+    Worker:
+      replicas: ${WORKER_NODES}
+      restartPolicy: Never
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: cloud.ebtech.com/gpu # GPU节点的标签
+                        operator: In
+                        values:
+                          - ${GPU_SPEC}
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/script.sh
+              env:
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: MODEL_NAME
+                  value: ${MODEL_NAME}
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: EPOCHS
+                  value: "${EPOCHS}"
+                - name: TRAIN_BATCH_SIZE_PER_DEVICE
+                  value: "${TRAIN_BATCH_SIZE_PER_DEVICE}"
+                - name: DATASET_TEMPLATE
+                  value: "${DATASET_TEMPLATE}"
+                - name: TZ
+                  value: Asia/Shanghai
+                - name: REPORT_TO
+                  value: "${REPORT_TO}"
+                - name: LOGGING_DIR
+                  value: "${LOGGING_DIR}"
+              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed-flash-attn
+              imagePullPolicy: Always
+              name: pytorch
+              resources:
+                limits:
+                  cpu: "${CPU_RESOURCES_LIMITS}"
+                  memory: "${MEM_RESOURCES_LIMITS}"
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
+                requests:
+                  cpu: "${CPU_RESOURCES_REQS}"
+                  memory: "${MEM_RESOURCES_REQS}"
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - name: models
+                  mountPath: /data
+                  readOnly: true
+                - mountPath: /dev/shm
+                  name: dshm
+                - name: hf-cache
+                  mountPath: /root/.cache/huggingface
+                - name: model-cache
+                  mountPath: /root/.cache/modelscope
+                - name: output
+                  mountPath: /app/output
+                - name: script
+                  mountPath: /workspace
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: hf-cache
+              emptyDir: {}
+            - name: model-cache
+              emptyDir: {}
+            - name: output
+              emptyDir: {}
+            - name: models
+              persistentVolumeClaim:
+                claimName: wzf0001
+            - name: script
+              configMap:
+                name: llama-factory-lora-pt
+                defaultMode: 0755
+                items:
+                  - key: script.sh
+                    path: script.sh
+
+  runPolicy:
+    cleanPodPolicy: None
+    suspend: false
