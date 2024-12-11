@@ -12,7 +12,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: s3cmd
-          image: 10.5.1.249/bob/s3cmd:stable
+          image: ${IMAGE_NAME}
           args:
             - sync
             # S3 中的桶名

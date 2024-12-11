@@ -11,15 +11,15 @@ spec:
         nodeAffinity: # Pod调度亲和性
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
-            - matchExpressions:
-              - key: cloud.ebtech.com/gpu # GPU节点的标签
-                operator: In
-                values:
-                - ${GPU_SPEC}
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU节点的标签
+                    operator: In
+                    values:
+                      - ${GPU_SPEC}
       restartPolicy: Never
       containers:
         - name: torch
-          image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed
+          image: ${IMAGE_NAME}
           imagePullPolicy: Always
           ports:
             - containerPort: 3389
@@ -70,8 +70,9 @@ spec:
               memory: "${MEM_RESOURCES_LIMITS}"
               nvidia.com/gpu: "${GPUS_PER_NODE}"
           volumeMounts:
-            - name: models
-              mountPath: /data
+            - name: public
+              mountPath: /data/models
+              subPath: huggingface-models
             - mountPath: /dev/shm
               name: dshm
             - name: dataset
@@ -121,6 +122,7 @@ spec:
             items:
               - key: script.sh
                 path: script.sh
-        - name: models
-          persistentVolumeClaim:
-            claimName: wzf0001
+        - name: public
+          hostPath:
+            path: /public
+            type: DirectoryOrCreate

@@ -45,7 +45,7 @@ TRAIN_ARGS="--dataset_dir ${DATASET_DIR:-/app/data} \
 	--bf16 true \
 	--warmup_ratio 0.02 \
 	--ddp_timeout 300000000 \
-	--save_on_each_node False \
+	--save_on_each_node True \
 	--flash_attn auto \
 	--gradient_checkpointing True \
 	--weight_decay 0.01 \

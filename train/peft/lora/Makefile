@@ -10,3 +10,6 @@ submit-single-node:
 
 submit-multi-node:
 	@bash submit-multi-node-job.sh
+
+submit-multi-node-roce:
+	@bash submit-multi-node-job-roce.sh

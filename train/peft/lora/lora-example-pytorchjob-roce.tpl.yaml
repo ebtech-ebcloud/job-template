@@ -19,10 +19,18 @@ spec:
                         operator: In
                         values:
                           - ${GPU_SPEC}
+                      - key: node-role.kubernetes.io/zhaoxin-exclusive
+                        operator: Exists
+          tolerations:
+            - key: node-role.ebtech.com/zhaoxin-exclusive
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
           containers:
             - command:
                 - bash
                 - -xc
+                # - sleep infinity
                 - /workspace/script.sh
               env:
                 - name: MODEL_NAME
@@ -47,9 +55,23 @@ spec:
                   value: "${REPORT_TO}"
                 - name: LOGGING_DIR
                   value: "${LOGGING_DIR}"
+                - name: NCCL_IB_DISABLE
+                  value: "${NCCL_IB_DISABLE}"
+                - name: NCCL_DEBUG
+                  value: "${NCCL_DEBUG}"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "${NCCL_SOCKET_IFNAME}"
+                - name: CUDA_VISIBLE_DEVICES
+                  value: "${GPUS_INDICES}"
+                - name: NCCL_NET
+                  value: "${NCCL_NET}"
               image: ${IMAGE_NAME}
               imagePullPolicy: Always
               name: pytorch
+              ports:
+                - name: pytorchjob-port
+                  containerPort: ${MASTER_PORT}
+                  protocol: TCP
               resources:
                 limits:
                   cpu: "${CPU_RESOURCES_LIMITS}"
@@ -62,9 +84,9 @@ spec:
                   nvidia.com/gpu: "${GPUS_PER_NODE}"
                   rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
               securityContext:
+                privileged: true
                 capabilities:
-                  add:
-                    - IPC_LOCK
+                  add: ["IPC_LOCK", "NET_ADMIN", "NET_RAW", "NET_BIND_SERVICE"]
               volumeMounts:
                 - name: public
                   mountPath: /data/models
@@ -88,6 +110,9 @@ spec:
                 - name: script
                   mountPath: /workspace
           hostIPC: true
+          hostNetwork: true
+          hostPID: true
+          dnsPolicy: ClusterFirstWithHostNet
           volumes:
             - name: dshm
               emptyDir:
@@ -138,10 +163,29 @@ spec:
                         operator: In
                         values:
                           - ${GPU_SPEC}
+                      - key: node-role.kubernetes.io/zhaoxin-exclusive
+                        operator: Exists
+                # podAntiAffinity:
+                #   preferredDuringSchedulingIgnoredDuringExecution:
+                #     - weight: 100
+                #       podAffinityTerm:
+                #         labelSelector:
+                #           matchExpressions:
+                #             - key: training.kubeflow.org/job-name
+                #               operator: In
+                #               values:
+                #                 - ${JOB_NAME}
+                #         topologyKey: kubernetes.io/hostname
+          tolerations:
+            - key: node-role.ebtech.com/zhaoxin-exclusive
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
           containers:
             - command:
                 - bash
                 - -xc
+                # - sleep infinity
                 - /workspace/script.sh
               env:
                 - name: GPUS_PER_NODE
@@ -166,6 +210,16 @@ spec:
                   value: "${REPORT_TO}"
                 - name: LOGGING_DIR
                   value: "${LOGGING_DIR}"
+                - name: NCCL_IB_DISABLE
+                  value: "${NCCL_IB_DISABLE}"
+                - name: NCCL_DEBUG
+                  value: "${NCCL_DEBUG}"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "${NCCL_SOCKET_IFNAME}"
+                - name: CUDA_VISIBLE_DEVICES
+                  value: "${GPUS_INDICES}"
+                - name: NCCL_NET
+                  value: "${NCCL_NET}"
               image: ${IMAGE_NAME}
               imagePullPolicy: Always
               name: pytorch
@@ -180,10 +234,14 @@ spec:
                   memory: "${MEM_RESOURCES_REQS}"
                   nvidia.com/gpu: "${GPUS_PER_NODE}"
                   rdma/hca_shared_devices_ib: "${HCA_SHARED_DEVICES}"
+              ports:
+                - name: pytorchjob-port
+                  containerPort: ${MASTER_PORT}
+                  protocol: TCP
               securityContext:
+                privileged: true
                 capabilities:
-                  add:
-                    - IPC_LOCK
+                  add: ["IPC_LOCK", "NET_ADMIN", "NET_RAW", "NET_BIND_SERVICE"]
               volumeMounts:
                 - name: public
                   mountPath: /data/models
@@ -207,6 +265,9 @@ spec:
                 - name: script
                   mountPath: /workspace
           hostIPC: true
+          hostNetwork: true
+          hostPID: true
+          dnsPolicy: ClusterFirstWithHostNet
           volumes:
             - name: dshm
               emptyDir:
