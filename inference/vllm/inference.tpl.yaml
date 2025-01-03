@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+
+kind: Deployment
+metadata:
+  name: mistral-7b
+  namespace: default
+  labels:
+    app: mistral-7b
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: mistral-7b
+  template:
+    metadata:
+      labels:
+        app: mistral-7b
+    spec:
+      affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                      - H800_NVLINK_80GB
+                      # - A800_NVLINK_80GB
+      volumes:
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          hostPath:
+            path: /public
+        # 挂载分布式存储盘（如需要）
+        # - name: data
+        #   persistentVolumeClaim:
+        #     claimName: ${DATA_PVC_NAME}
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "10Gi"
+      containers:
+      - name: mistral-7b
+        # image: vllm/vllm-openai:latest
+        image: registry.cn-beijing.aliyuncs.com/dproxy/vllm-openai:latest
+        command: ["/bin/sh", "-c"]
+        args: [
+          "vllm serve /public/huggingface-models/mistralai/Mistral-7B-Instruct-v0.3 --trust-remote-code --enable-chunked-prefill --max_num_batched_tokens 1024"
+        ]
+        env:
+          - name: HF_DATASETS_OFFLINE
+            value: "1"
+          - name: TRANSFORMERS_OFFLINE
+            value: "1"
+          - name: HF_HUB_OFFLINE
+            value: "1"
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "10"
+            memory: 20G
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "2"
+            memory: 6G
+            nvidia.com/gpu: "1"
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          mountPath: /public
+        # 挂载分布式存储盘（如需要）
+        # - name: data
+        #   mountPath: /data
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 5
