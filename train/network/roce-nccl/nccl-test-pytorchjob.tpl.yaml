@@ -1,0 +1,255 @@
+
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: "${JOB_NAME}"
+  annotations:
+    k8s.v1.cni.cncf.io/networks: hostdevice-net
+spec:
+  nprocPerNode: "${GPUS_PER_NODE}"
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/pytorch: unconfined
+        spec:
+          hostNetwork: true
+          hostPID: true
+          dnsPolicy: ClusterFirstWithHostNet
+          tolerations:
+            - key: node-role.ebtech.com/zhifeng-exclusive
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
+            - key: ebtech.com/test
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
+          subdomain: "${JOB_NAME}"
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                    - H800_NVLINK_80GB # GPU型号
+                  # - key: kubernetes.io/hostname # 主机名
+                  #   operator: In # NotIn
+                  #   values:
+                  #   - h800-161
+                    # - hgx-091
+                    # - hgx-055 # 不调度到这台服务器
+                    # - hgx-028
+                    # - hgx-030
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/nccl_test.sh
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - |
+                        sed -i 's/#Port 22/Port 2222/' /etc/ssh/sshd_config
+                        service ssh start
+                        cp /root/.ssh/shared-keys/* /root/.ssh/
+                        chmod 600 /root/.ssh/id_rsa
+                        chmod 644 /root/.ssh/authorized_keys
+              ports:
+                - containerPort: 2222
+                  name: ssh
+              env:
+                - name: NNODES
+                  value: "${NNODES}"
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: HOSTNAME
+                  value: "${JOB_NAME}-master-0"
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always #IfNotPresent # Always
+              name: pytorch
+              securityContext:
+                privileged: true
+                capabilities:
+                  add: ["NET_ADMIN", "NET_RAW", "NET_BIND_SERVICE"]
+              resources:
+                limits:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /workspace/run/nccl_test.sh
+                  name: nccl-test-roce-script
+                  subPath: nccl_test.sh
+                - mountPath: /root/.ssh/shared-keys/
+                  name: ssh-keys
+                  readOnly: true
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: nccl-test-roce-script
+              configMap:
+                name: nccl-test-roce-script
+                defaultMode: 0755
+                items:
+                  - key: nccl_test.sh
+                    path: nccl_test.sh
+            - name: ssh-keys
+              configMap:
+                name: ssh-keys
+                defaultMode: 0600
+    Worker:
+      replicas: ${WORKER_NODES}
+      restartPolicy: Never
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/pytorch: unconfined
+        spec:
+          hostNetwork: true
+          hostPID: true
+          dnsPolicy: ClusterFirstWithHostNet
+          tolerations:
+            - key: node-role.ebtech.com/zhifeng-exclusive
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
+            - key: ebtech.com/test
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
+          subdomain: "${JOB_NAME}"
+          affinity:
+            nodeAffinity: # Pod调度亲和性
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                    - H800_NVLINK_80GB # GPU型号
+                  # - key: kubernetes.io/hostname # 主机名
+                  #   operator: In # NotIn
+                  #   values:
+                  #   - h800-162
+                  #   - hgx-028
+                  #   - hgx-091
+                  #   - hgx-096
+                    # - hgx-055 # 不调度到这台服务器
+                    # - hgx-028
+                    # - hgx-030
+          containers:
+            - command:
+                - bash
+                - -xc
+                - /workspace/run/nccl_test.sh
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - |
+                        sed -i 's/#Port 22/Port 2222/' /etc/ssh/sshd_config
+                        service ssh start
+                        cp /root/.ssh/shared-keys/* /root/.ssh/
+                        chmod 600 /root/.ssh/id_rsa
+                        chmod 644 /root/.ssh/authorized_keys
+              ports:
+                - containerPort: 2222
+                  name: ssh
+              env:
+                - name: NNODES
+                  value: "${NNODES}"
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: HOSTNAME
+                  value: "${JOB_NAME}-worker-${INDEX}"
+              image: "${IMAGE_NAME}"
+              imagePullPolicy: Always # IfNotPresent # Always
+              name: pytorch
+              securityContext:
+                privileged: true
+                capabilities:
+                  add: ["NET_ADMIN", "NET_RAW", "NET_BIND_SERVICE"]
+              resources:
+                limits:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+                requests:
+                  cpu: ${CPUS_PER_NODE}
+                  memory: ${MEMORY_PER_NODE}
+                  nvidia.com/gpu: "${GPUS_PER_NODE}"
+                  rdma/hca_shared_devices_ib: "${GPUS_PER_NODE}"
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /workspace/run/nccl_test.sh
+                  name: nccl-test-roce-script
+                  subPath: nccl_test.sh
+                - mountPath: /root/.ssh/shared-keys/
+                  name: ssh-keys
+                  readOnly: true
+          hostIPC: true
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 80Gi
+            - name: nccl-test-roce-script
+              configMap:
+                name: nccl-test-roce-script
+                defaultMode: 0755
+                items:
+                  - key: nccl_test.sh
+                    path: nccl_test.sh
+            - name: ssh-keys
+              configMap:
+                name: ssh-keys
+                defaultMode: 0600
+  runPolicy:
+    cleanPodPolicy: None
+    suspend: false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "${JOB_NAME}"
+spec:
+  type: ClusterIP
+  selector:
+    pytorch-job-name: "${JOB_NAME}"
+  ports:
+  - port: 22
+    targetPort: 2222
+    name: ssh
