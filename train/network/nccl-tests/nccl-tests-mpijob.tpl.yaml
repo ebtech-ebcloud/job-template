@@ -13,7 +13,7 @@ spec:
       template:
         spec:
           containers:
-            - image: 10.5.1.249/bob-base-image/nccl-tests:12.2.2-cudnn8-devel-ubuntu20.04-nccl2.21.5-1-2ff05b2
+            - image: ${IMAGE_NAME}
               name: nccl
               env:
                 - name: OMPI_ALLOW_RUN_AS_ROOT
@@ -53,7 +53,7 @@ spec:
                         values:
                           - ${GPU_SPEC} # GPU型号
           containers:
-            - image: 10.5.1.249/bob-base-image/nccl-tests:12.2.2-cudnn8-devel-ubuntu20.04-nccl2.21.5-1-2ff05b2
+            - image: ${IMAGE_NAME}
               name: nccl
               resources:
                 requests:

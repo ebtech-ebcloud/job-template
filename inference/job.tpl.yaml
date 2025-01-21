@@ -24,7 +24,7 @@ spec:
                       - ${GPU_SPEC}
       containers:
         - name: vllm
-          image: 10.5.1.249/bob/vllm-openai-offline:stable
+          image: ${IMAGE_NAME}
           command:
             - python3
             - scripts.py
@@ -51,14 +51,16 @@ spec:
           volumeMounts:
             - name: adapters
               mountPath: /adapters
-            - name: data
-              mountPath: /data
+            - name: public
+              mountPath: /data/models
+              subPath: huggingface-models
             - name: sample-prompts
               mountPath: /prompts
       volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: wzf0001
+        - name: public
+          hostPath:
+            path: /public
+            type: DirectoryOrCreate
         - name: adapters
           persistentVolumeClaim:
             claimName: example-output

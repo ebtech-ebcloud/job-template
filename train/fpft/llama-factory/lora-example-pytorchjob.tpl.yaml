@@ -45,7 +45,7 @@ spec:
                   value: "${REPORT_TO}"
                 - name: LOGGING_DIR
                   value: "${LOGGING_DIR}"
-              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed-flash-attn
+              image: ${IMAGE_NAME}
               imagePullPolicy: Always
               name: pytorch
               resources:
@@ -64,9 +64,9 @@ spec:
                   add:
                     - IPC_LOCK
               volumeMounts:
-                - name: models
-                  mountPath: /data
-                  readOnly: true
+                - name: public
+                  mountPath: /data/models
+                  subPath: huggingface-models
                 - mountPath: /dev/shm
                   name: dshm
                 - name: hf-cache
@@ -89,9 +89,10 @@ spec:
               emptyDir: {}
             - name: output
               emptyDir: {}
-            - name: models
-              persistentVolumeClaim:
-                claimName: wzf0001
+            - name: public
+              hostPath:
+                path: /public
+                type: DirectoryOrCreate
             - name: script
               configMap:
                 name: llama-factory-lora-pt
@@ -139,7 +140,7 @@ spec:
                   value: "${REPORT_TO}"
                 - name: LOGGING_DIR
                   value: "${LOGGING_DIR}"
-              image: 10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed-flash-attn
+              image: ${IMAGE_NAME}
               imagePullPolicy: Always
               name: pytorch
               resources:
@@ -158,9 +159,9 @@ spec:
                   add:
                     - IPC_LOCK
               volumeMounts:
-                - name: models
-                  mountPath: /data
-                  readOnly: true
+                - name: public
+                  mountPath: /data/models
+                  subPath: huggingface-models
                 - mountPath: /dev/shm
                   name: dshm
                 - name: hf-cache
@@ -183,9 +184,10 @@ spec:
               emptyDir: {}
             - name: output
               emptyDir: {}
-            - name: models
-              persistentVolumeClaim:
-                claimName: wzf0001
+            - name: public
+              hostPath:
+                path: /public
+                type: DirectoryOrCreate
             - name: script
               configMap:
                 name: llama-factory-lora-pt

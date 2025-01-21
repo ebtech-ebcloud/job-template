@@ -180,8 +180,6 @@ spec:
                 - mountPath: /root/.ssh/shared-keys/
                   name: ssh-keys
                   readOnly: true
-                # - name: models
-                #   mountPath: /data
           hostIPC: true
           volumes:
             - name: dshm
@@ -199,9 +197,6 @@ spec:
               configMap:
                 name: ssh-keys
                 defaultMode: 0600
-            # - name: models
-            #   persistentVolumeClaim:
-            #     claimName: wzf0001
   runPolicy:
     cleanPodPolicy: None
     suspend: false

@@ -17,6 +17,6 @@ kubectl create secret generic s3-cfg --from-file=.s3cfg --dry-run=client -o yaml
 
 ## 运行数据同步 Job
 
-执行 `kubectl apply -f job.yaml` 命令, 在集群中启动数据同步任务
+执行 `export IMAGE_NAME=${IMAGE_NAME:-"10.5.1.249/bob/s3cmd:stable"} && envsubst '$IMAGE_NAME' < job.yaml | kubectl replace --force -f -` 命令, 在集群中启动数据同步任务
 
 可以在 `job.yaml` 的 `args` 字段中添加 `--include` 或 `--exclude` 选项来实现文件过滤效果。更详细的使用参数说明，请参考 [s3cmd](https://s3tools.org/usage)
