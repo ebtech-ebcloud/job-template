@@ -1,0 +1,223 @@
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
+metadata:
+  name: sglang-4
+spec:
+  replicas: 1
+  leaderWorkerTemplate:
+    size: 4
+    restartPolicy: None #RecreateGroupOnPodRestart
+    leaderTemplate:
+      metadata:
+        labels:
+          role: leader
+      spec:
+        affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: cloud.ebtech.com/gpu
+                      operator: In
+                      values:
+                        - A800_NVLINK_80GB
+                    - key: kubernetes.io/hostname # 主机名
+                      operator: In
+                      values:
+                      - hgx-027
+                      - hgx-028
+                      - hgx-055
+                      - hgx-030
+                      - hgx-099
+        containers:
+          - name: sglang-leader
+            image: registry-cn-beijing2-internal.ebtech.com/docker.io/lmsysorg/sglang:v0.4.2.post4-cu125-build1
+            # image: registry-cn-beijing2-internal.ebtech.com/docker.io/lmsysorg/sglang:v0.4.3-cu125-build14
+            securityContext:
+              privileged: true
+              capabilities:
+                  add:
+                    - IPC_LOCK
+            env:
+              - name: HUGGING_FACE_HUB_TOKEN
+                value: <your-hf-token>
+              - name: NCCL_SOCKET_IFNAME
+                value: eth0
+              # - name: NCCL_DEBUG
+              #   value: TRACE
+              # - name: NCCL_DEBUG_SUBSYS
+              #   value: ALL
+              - name: GLOO_SOCKET_IFNAME
+                value: eth0
+              - name: NCCL_IB_DISABLE
+                value: "0"
+              - name: NCCL_NET_GDR_LEVEL
+                value: "2"
+              - name: ULIMIT_MEMLOCK
+                value: "-1"
+              - name: EB_PRELOAD_N
+                value: "4"
+              - name: LWS_WORKER_INDEX
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.labels['leaderworkerset.sigs.k8s.io/worker-index']
+            command:
+              - bash
+              - "-c"
+              - |
+                # --mem-fraction-static 0.54 \
+                echo $(LWS_LEADER_ADDRESS) $(LWS_GROUP_SIZE) $(LWS_WORKER_INDEX)
+
+                python3 -m sglang.launch_server \
+                  --model-path /models/deepseek-ai/DeepSeek-R1-BF16 \
+                  --tp "32" \
+                  --dist-init-addr $(LWS_LEADER_ADDRESS):20000 \
+                  --host 0.0.0.0 --port 40000 \
+                  --nnodes $(LWS_GROUP_SIZE) \
+                  --node-rank $(LWS_WORKER_INDEX) \
+                  --trust-remote-code \
+                  --disable-cuda-graph
+            resources:
+              limits:
+                cpu: "60"
+                memory: 800G
+                nvidia.com/gpu: "8"
+                rdma/hca_shared_devices_ib: "8"
+              requests:
+                cpu: "60"
+                memory: 800G
+                nvidia.com/gpu: "8"
+                rdma/hca_shared_devices_ib: "8"
+            ports:
+              - containerPort: 40000
+            readinessProbe:
+              tcpSocket:
+                port: 40000
+              initialDelaySeconds: 15
+              periodSeconds: 10
+            volumeMounts:
+              - mountPath: /dev/shm
+                name: dshm
+              - name: models
+                mountPath: /public
+              - name: private-models
+                mountPath: /models
+        hostIPC: true
+        volumes:
+          - name: dshm
+            emptyDir:
+              medium: Memory
+              sizeLimit: 400Gi
+          - name: models
+            hostPath:
+              path: /public
+          - name: private-models
+            persistentVolumeClaim:
+              claimName: wzf0002
+    workerTemplate:
+      spec:
+        affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: cloud.ebtech.com/gpu
+                      operator: In
+                      values:
+                        - A800_NVLINK_80GB
+                    - key: kubernetes.io/hostname # 主机名
+                      operator: In
+                      values:
+                      - hgx-027
+                      - hgx-028
+                      - hgx-055
+                      - hgx-030
+                      - hgx-099
+        containers:
+          - name: sglang-worker
+            image: registry-cn-beijing2-internal.ebtech.com/docker.io/lmsysorg/sglang:v0.4.2.post4-cu125-build1
+            # image: registry-cn-beijing2-internal.ebtech.com/docker.io/lmsysorg/sglang:v0.4.3-cu125-build14
+            securityContext:
+              privileged: true
+              capabilities:
+                  add:
+                    - IPC_LOCK
+            env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              value: <your-hf-token>
+            - name: NCCL_SOCKET_IFNAME
+              value: eth0
+            # - name: NCCL_DEBUG
+            #   value: TRACE
+            # - name: NCCL_DEBUG_SUBSYS
+            #   value: ALL
+            - name: GLOO_SOCKET_IFNAME
+              value: eth0
+            - name: NCCL_IB_DISABLE
+              value: "0"
+            - name: NCCL_NET_GDR_LEVEL
+              value: "2"
+            - name: EB_PRELOAD_N
+              value: "4"
+            - name: LWS_WORKER_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['leaderworkerset.sigs.k8s.io/worker-index']
+            command:
+              - bash
+              - "-c"
+              - |
+                echo $(LWS_LEADER_ADDRESS) $(LWS_GROUP_SIZE) $(LWS_WORKER_INDEX)
+
+                python3 -m sglang.launch_server \
+                  --model-path /models/deepseek-ai/DeepSeek-R1-BF16 \
+                  --tp "32" \
+                  --dist-init-addr $(LWS_LEADER_ADDRESS):20000 \
+                  --nnodes $(LWS_GROUP_SIZE) \
+                  --node-rank $(LWS_WORKER_INDEX) \
+                  --trust-remote-code \
+                  --mem-fraction-static 0.54 \
+                  --disable-cuda-graph
+            resources:
+              limits:
+                cpu: "60"
+                memory: 800G
+                nvidia.com/gpu: "8"
+                rdma/hca_shared_devices_ib: "8"
+              requests:
+                cpu: "60"
+                memory: 800G
+                nvidia.com/gpu: "8"
+                rdma/hca_shared_devices_ib: "8"
+            volumeMounts:
+              - mountPath: /dev/shm
+                name: dshm
+              - name: models
+                mountPath: /public
+              - name: private-models
+                mountPath: /models
+        hostIPC: true
+        volumes:
+          - name: dshm
+            emptyDir:
+              medium: Memory
+              sizeLimit: 400Gi
+          - name: models
+            hostPath:
+              path: /public
+          - name: private-models
+            persistentVolumeClaim:
+              claimName: wzf0002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sglang-leader
+spec:
+  selector:
+    leaderworkerset.sigs.k8s.io/name: sglang
+    role: leader
+  ports:
+    - protocol: TCP
+      port: 40000
+      targetPort: 40000
