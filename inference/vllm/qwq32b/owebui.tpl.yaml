@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+
+kind: Deployment
+metadata:
+  name: owebui-1
+  namespace: default
+  labels:
+    app: owebui-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: owebui-1
+  template:
+    metadata:
+      labels:
+        app: owebui-1
+    spec:
+      volumes:
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          hostPath:
+            path: /public
+        # 挂载分布式存储盘（如需要）
+        - name: data
+          persistentVolumeClaim:
+            claimName: ${DATA_PVC_NAME}
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "10Gi"
+      containers:
+      - name: owebui
+        image: registry-cn-beijing2-internal.ebtech.com/ghcr.io/open-webui/open-webui:ollama
+        command:
+          - bash
+          - "-c"
+          - |
+            # prepare open-webui data dir
+            mkdir -p /data/owebui-data
+            rm -rf /app/backend/data
+            ln -s /data/owebui-data/data /app/backend/
+
+            # prepare ollama models dir
+            mkdir -p /data/ollama-data
+            rm -rf /root/.ollama
+            ln -s /data/ollama-data /root/.ollama
+            
+            # prepare open-webui secret key
+            if [ ! -f /app/backend/data/.webui_secret_key ]; then
+              echo $(head -c 12 /dev/random | base64) > /app/backend/data/.webui_secret_key
+            fi
+            ln -s /app/backend/data/.webui_secret_key /app/backend/.webui_secret_key
+            
+            # start open-webui
+            bash /app/backend/start.sh
+        env:
+          - name: HF_ENDPOINT
+            value: "https://hf-mirror.com"
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "10"
+            memory: 20G
+          requests:
+            cpu: "10"
+            memory: 20G
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          mountPath: /public
+        # 挂载分布式存储盘（如需要）
+        - name: data
+          mountPath: /data
+
+---
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: owebui-1
+  namespace: default
+spec:
+  ports:
+  - name: http-owebui-1
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  # The label selector should match the deployment labels & it is useful for prefix caching feature
+  selector:
+    app: owebui-1
+  sessionAffinity: None
+  # 指定 LoadBalancer 类型，用于将服务暴露到外部，自动分配公网 IP
+  type: LoadBalancer
+  # type: ClusterIP

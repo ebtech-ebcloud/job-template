@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+
+kind: Deployment
+metadata:
+  name: qwq-32b-1
+  namespace: default
+  labels:
+    app: qwq-32b-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwq-32b-1
+  template:
+    metadata:
+      labels:
+        app: qwq-32b-1
+    spec:
+      affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                      # - H800_NVLINK_80GB
+                      - A800_NVLINK_80GB
+      volumes:
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          hostPath:
+            path: /public
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "200Gi"
+      containers:
+      - name: qwq-32b
+        image: registry-cn-beijing2-internal.ebtech.com/docker.io/lmsysorg/sglang:v0.4.2.post4-cu125-build1
+        command:
+          - bash
+          - "-c"
+          - |
+            cp -rv /public/huggingface-models/Qwen/QwQ-32B /dev/shm/
+            python3 -m sglang.launch_server \
+                  --model-path /dev/shm/QwQ-32B \
+                  --tp "4" \
+                  --host 0.0.0.0 --port 8000 \
+                  --trust-remote-code \
+                  --chunked-prefill-size 16384 \
+                  --context-length 65536
+        env:
+          - name: HF_DATASETS_OFFLINE
+            value: "1"
+          - name: TRANSFORMERS_OFFLINE
+            value: "1"
+          - name: HF_HUB_OFFLINE
+            value: "1"
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "40"
+            memory: 400G
+            nvidia.com/gpu: "4"
+          requests:
+            cpu: "40"
+            memory: 400G
+            nvidia.com/gpu: "4"
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          mountPath: /public
+
+# ---
+
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: qwq-32b-1
+#   namespace: default
+# spec:
+#   ports:
+#   - name: http-qwq-32b-1
+#     port: 80
+#     protocol: TCP
+#     targetPort: 8000
+#   # The label selector should match the deployment labels & it is useful for prefix caching feature
+#   selector:
+#     app: qwq-32b-1
+#   sessionAffinity: None
+#   # 指定 LoadBalancer 类型，用于将服务暴露到外部，自动分配公网 IP
+#   type: LoadBalancer
