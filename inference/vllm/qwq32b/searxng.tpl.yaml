@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+
+kind: Deployment
+metadata:
+  name: searxng-1
+  namespace: default
+  labels:
+    app: searxng-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: searxng-1
+  template:
+    metadata:
+      labels:
+        app: searxng-1
+    spec:
+      volumes:
+        # 挂载分布式存储盘（如需要）
+        - name: data
+          persistentVolumeClaim:
+            claimName: ${DATA_PVC_NAME}
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "10Gi"
+      containers:
+      - name: searxng
+        image: registry-cn-beijing2-internal.ebtech.com/docker.io/searxng/searxng:latest
+        command:
+          - sh
+          - "-c"
+          - |
+            rm -f /etc/searxng/settings.yml /etc/searxng/limiter.toml
+            cp /root/.searxng/settings.yml /etc/searxng/
+            cp /root/.searxng/limiter.toml /etc/searxng/
+            # export SEARXNG_BIND_ADDRESS=0.0.0.0
+            # export SEARXNG_PORT=8080
+            export SEARXNG_SECRET=ABABAB
+            /usr/local/searxng/dockerfiles/docker-entrypoint.sh
+        env:
+          - name: HF_ENDPOINT
+            value: "https://hf-mirror.com"
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "10"
+            memory: 20G
+          requests:
+            cpu: "10"
+            memory: 20G
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        - name: data
+          mountPath: /root/.searxng/
+          subPath: searxng-data
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: searxng-1
+  namespace: default
+spec:
+  ports:
+  - name: http-searxng-1
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  # The label selector should match the deployment labels & it is useful for prefix caching feature
+  selector:
+    app: searxng-1
+  sessionAffinity: None
+  # 指定 LoadBalancer 类型，用于将服务暴露到外部，自动分配公网 IP
+  type: ClusterIP
