@@ -37,7 +37,7 @@ spec:
           - "-c"
           - |
             # prepare open-webui data dir
-            mkdir -p /data/owebui-data
+            mkdir -p /data/owebui-data/data
             rm -rf /app/backend/data
             ln -s /data/owebui-data/data /app/backend/
 
@@ -45,6 +45,8 @@ spec:
             mkdir -p /data/ollama-data
             rm -rf /root/.ollama
             ln -s /data/ollama-data /root/.ollama
+            # echo "pulling  llama3.2:1b ..."
+            # ollama pull llama3.2:1b
             
             # prepare open-webui secret key
             if [ ! -f /app/backend/data/.webui_secret_key ]; then
@@ -52,11 +54,16 @@ spec:
             fi
             ln -s /app/backend/data/.webui_secret_key /app/backend/.webui_secret_key
             
+            # comment out lines containing "application/json" in images.py
+            sed -i '/application\/json/s/^/#/' /app/backend/open_webui/routers/images.py
+            
             # start open-webui
             bash /app/backend/start.sh
         env:
           - name: HF_ENDPOINT
             value: "https://hf-mirror.com"
+          - name: ENABLE_EVALUATION_ARENA_MODELS
+            value: "false"
         ports:
         - containerPort: 8080
         resources:
