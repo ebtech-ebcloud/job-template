@@ -49,7 +49,9 @@ spec:
                   --host 0.0.0.0 --port 8000 \
                   --trust-remote-code \
                   --chunked-prefill-size 16384 \
-                  --context-length 65536
+                  --context-length 65536 \
+                  --served-model-name qwq-32b \
+                  --tool-call-parser qwen25
         env:
           - name: HF_DATASETS_OFFLINE
             value: "1"
@@ -75,23 +77,23 @@ spec:
         - name: models
           mountPath: /public
 
-# ---
+---
 
 
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: qwq-32b-1
-#   namespace: default
-# spec:
-#   ports:
-#   - name: http-qwq-32b-1
-#     port: 80
-#     protocol: TCP
-#     targetPort: 8000
-#   # The label selector should match the deployment labels & it is useful for prefix caching feature
-#   selector:
-#     app: qwq-32b-1
-#   sessionAffinity: None
-#   # 指定 LoadBalancer 类型，用于将服务暴露到外部，自动分配公网 IP
-#   type: LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwq-32b-1
+  namespace: default
+spec:
+  ports:
+  - name: http-qwq-32b-1
+    port: 80
+    protocol: TCP
+    targetPort: 8000
+  # The label selector should match the deployment labels & it is useful for prefix caching feature
+  selector:
+    app: qwq-32b-1
+  sessionAffinity: None
+  # 指定 LoadBalancer 类型，用于将服务暴露到外部，自动分配公网 IP
+  type: ClusterIP
