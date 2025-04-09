@@ -33,7 +33,7 @@ spec:
         - name: shm
           emptyDir:
             medium: Memory
-            sizeLimit: "200Gi"
+            sizeLimit: "50Gi"
       containers:
       - name: qwq-32b
         image: registry-cn-huabei1-internal.ebcloud.com/docker.io/lmsysorg/sglang:v0.4.5-cu125
