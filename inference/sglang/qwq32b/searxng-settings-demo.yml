@@ -606,11 +606,12 @@ engines:
   - name: yahoo
     engine: yahoo
     shortcut: yh
-    disabled: false
+    disabled: true
 
   - name: yahoo news
     engine: yahoo_news
     shortcut: yhn
+    disabled: true
 
   - name: rubygems
     shortcut: rbg

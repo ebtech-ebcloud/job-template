@@ -24,7 +24,6 @@ spec:
                   - key: cloud.ebtech.com/gpu
                     operator: In
                     values:
-                      # - H800_NVLINK_80GB
                       - A800_NVLINK_80GB
       volumes:
         # 挂载共享模型数据大盘（如需要）
@@ -37,18 +36,16 @@ spec:
             sizeLimit: "200Gi"
       containers:
       - name: qwq-32b
-        image: registry-cn-beijing2-internal.ebtech.com/docker.io/lmsysorg/sglang:v0.4.2.post4-cu125-build1
+        image: registry-cn-huabei1-internal.ebcloud.com/docker.io/lmsysorg/sglang:v0.4.5-cu125
         command:
           - bash
           - "-c"
           - |
-            cp -rv /public/huggingface-models/Qwen/QwQ-32B /dev/shm/
             python3 -m sglang.launch_server \
-                  --model-path /dev/shm/QwQ-32B \
-                  --tp "4" \
+                  --model-path /public/huggingface-models/Qwen/QwQ-32B \
+                  --tp "1" \
                   --host 0.0.0.0 --port 8000 \
                   --trust-remote-code \
-                  --chunked-prefill-size 16384 \
                   --context-length 65536 \
                   --served-model-name qwq-32b \
                   --tool-call-parser qwen25
@@ -63,13 +60,13 @@ spec:
         - containerPort: 8000
         resources:
           limits:
-            cpu: "40"
-            memory: 400G
-            nvidia.com/gpu: "4"
+            cpu: "10"
+            memory: 100G
+            nvidia.com/gpu: "1"
           requests:
-            cpu: "40"
-            memory: 400G
-            nvidia.com/gpu: "4"
+            cpu: "10"
+            memory: 100G
+            nvidia.com/gpu: "1"
         volumeMounts:
         - name: shm
           mountPath: /dev/shm

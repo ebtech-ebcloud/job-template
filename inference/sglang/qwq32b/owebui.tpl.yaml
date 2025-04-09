@@ -1,3 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: owebui-data # 存储卷的名称
+spec:
+  accessModes:
+    - ReadWriteMany # 存储卷的读写模式
+  resources:
+    requests:
+      storage: 1Gi # 存储卷的容量大小
+  storageClassName: shared-nvme-cn-huabei1 # 创建存储卷使用的StorageClass的名字
+
+---
+
 apiVersion: apps/v1
 
 kind: Deployment
@@ -24,18 +38,19 @@ spec:
         # 挂载分布式存储盘（如需要）
         - name: data
           persistentVolumeClaim:
-            claimName: ${DATA_PVC_NAME}
+            claimName: owebui-data
         - name: shm
           emptyDir:
             medium: Memory
             sizeLimit: "10Gi"
       containers:
       - name: owebui
-        image: registry-cn-beijing2-internal.ebtech.com/ghcr.io/open-webui/open-webui:ollama
+        image: registry-cn-huabei1-internal.ebcloud.com/ghcr.io/open-webui/open-webui:ollama
         command:
           - bash
           - "-c"
           - |
+            # pip install huggingface_hub[hf_xet] -i https://pypi.tuna.tsinghua.edu.cn/simple
             # prepare open-webui data dir
             mkdir -p /data/owebui-data/data
             rm -rf /app/backend/data
@@ -64,6 +79,20 @@ spec:
             value: "https://hf-mirror.com"
           - name: ENABLE_EVALUATION_ARENA_MODELS
             value: "false"
+          - name: RAG_EMBEDDING_MODEL
+            value: "/public/huggingface-models/sentence-transformers/all-MiniLM-L6-v2"
+          # - name: ENABLE_OPENAI_API # 不带模型服务(OpenAI_API_BASE_URL/OpenAI_API_BASE_URLS)启动时，取消掉这里的注释，以避免对 openai 官方 API 的依赖
+          #   value: "false"
+          - name: OPENAI_API_KEYS # 多个 API Key 用分号分隔
+            value: "sk-foo-bar"
+          - name: OPENAI_API_BASE_URLS # 多个 API Base URL 用分号分隔
+            value: "http://qwq-32b-1/v1"
+          - name: ENABLE_RAG_WEB_SEARCH
+            value: "true"
+          - name: RAG_WEB_SEARCH_ENGINE
+            value: "searxng"
+          - name: SEARXNG_QUERY_URL
+            value: "http://searxng-1/search?q=<query>"
         ports:
         - containerPort: 8080
         resources:

@@ -1,3 +1,18 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: searxng-data # 存储卷的名称
+spec:
+  accessModes:
+    - ReadWriteMany # 存储卷的读写模式
+  resources:
+    requests:
+      storage: 1Gi # 存储卷的容量大小
+  storageClassName: shared-nvme-cn-huabei1 # 创建存储卷使用的StorageClass的名字
+
+---
+
+
 apiVersion: apps/v1
 
 kind: Deployment
@@ -20,14 +35,17 @@ spec:
         # 挂载分布式存储盘（如需要）
         - name: data
           persistentVolumeClaim:
-            claimName: ${DATA_PVC_NAME}
+            claimName: searxng-data
         - name: shm
           emptyDir:
             medium: Memory
             sizeLimit: "10Gi"
+        - name: public-data
+          hostPath:
+            path: /public
       containers:
       - name: searxng
-        image: registry-cn-beijing2-internal.ebtech.com/docker.io/searxng/searxng:latest
+        image: registry-cn-huabei1-internal.ebcloud.com/docker.io/searxng/searxng:latest
         command:
           - sh
           - "-c"
@@ -66,7 +84,9 @@ spec:
           mountPath: /dev/shm
         - name: data
           mountPath: /root/.searxng/
-          subPath: searxng-data
+          subPath: searxng-data-mount
+        - name: public-data
+          mountPath: /public
 
 ---
 
