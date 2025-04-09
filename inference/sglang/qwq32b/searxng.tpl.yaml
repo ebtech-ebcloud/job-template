@@ -39,7 +39,7 @@ spec:
         - name: shm
           emptyDir:
             medium: Memory
-            sizeLimit: "10Gi"
+            sizeLimit: "2Gi"
         - name: public-data
           hostPath:
             path: /public
@@ -74,11 +74,11 @@ spec:
         - containerPort: 8080
         resources:
           limits:
-            cpu: "10"
-            memory: 20G
+            cpu: "4"
+            memory: 8G
           requests:
-            cpu: "10"
-            memory: 20G
+            cpu: "2"
+            memory: 4G
         volumeMounts:
         - name: shm
           mountPath: /dev/shm

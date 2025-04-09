@@ -42,7 +42,7 @@ spec:
         - name: shm
           emptyDir:
             medium: Memory
-            sizeLimit: "10Gi"
+            sizeLimit: "2Gi"
       containers:
       - name: owebui
         image: registry-cn-huabei1-internal.ebcloud.com/ghcr.io/open-webui/open-webui:ollama
@@ -97,11 +97,11 @@ spec:
         - containerPort: 8080
         resources:
           limits:
-            cpu: "10"
-            memory: 20G
+            cpu: "2"
+            memory: 4G
           requests:
-            cpu: "10"
-            memory: 20G
+            cpu: "2"
+            memory: 4G
         volumeMounts:
         - name: shm
           mountPath: /dev/shm
