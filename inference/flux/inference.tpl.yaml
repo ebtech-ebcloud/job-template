@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+
+kind: Deployment
+metadata:
+  name: flux-dev-1
+  namespace: default
+  labels:
+    app: flux-dev-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flux-dev-1
+  template:
+    metadata:
+      labels:
+        app: flux-dev-1
+    spec:
+      affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                      - A800_NVLINK_80GB
+      volumes:
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          hostPath:
+            path: /public
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "50Gi"
+      containers:
+      - name: flux-dev
+        image: registry-cn-huabei1-internal.ebcloud.com/nvcr.io/nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+        # image: registry-cn-huabei1-internal.ebcloud.com/nvcr.io/nvidia/pytorch:25.03-py3
+        command:
+          - bash
+          - "-c"
+          - |
+            apt update && apt install python3 python3.10-venv git libgl1-mesa-glx libglib2.0-0 -y
+            cd "$HOME" && cp -r /public/shared-resources/repos/flux .
+            cd ~/flux && python3 -m venv .venv
+            cd ~/flux && source .venv/bin/activate && pip install -e '.[all,tensorrt]' -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple
+            # use local repos
+            sed -i 's/from_pretrained(/from_pretrained(\"\/public\/huggingface-models\/\" + /g' src/flux/modules/conditioner.py
+            sed -i 's/Falconsai/\/public\/huggingface-models\/Falconsai/g' demo_gr.py
+            # allow remote access
+            sed -i 's/launch(/launch(server_name=\"0.0.0.0\",show_api=False,ssl_verify=False,/g' demo_gr.py
+            # work around for gradio_client: skip additionalProperties check 
+            sed -i 's/if \"additional/if False and \"additional/g' ~/flux/.venv/lib/python3.10/site-packages/gradio_client/utils.py
+            # sleep 3600
+            # loose constraint for torch and nvidia-modelopt
+            # sed -i 's/torch == 2.5.1/torch >= 2.5.1/g' pyproject.toml
+            # sed -i 's/nvidia-modelopt[torch,onnx] ~=/nvidia-modelopt[torch,onnx] >=/g' pyproject.toml
+            cd ~/flux && source .venv/bin/activate && \
+              FLUX_DEV=/public/huggingface-models/black-forest-labs/FLUX.1-dev/flux1-dev.safetensors \
+              AE=/public/huggingface-models/black-forest-labs/FLUX.1-dev/ae.safetensors \
+              python3 demo_gr.py --name flux-dev
+        env:
+          - name: HF_DATASETS_OFFLINE
+            value: "1"
+          - name: TRANSFORMERS_OFFLINE
+            value: "1"
+          - name: HF_HUB_OFFLINE
+            value: "1"
+        ports:
+        - containerPort: 7860
+        resources:
+          limits:
+            cpu: "10"
+            memory: 100G
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "10"
+            memory: 100G
+            nvidia.com/gpu: "1"
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        # 挂载共享模型数据大盘（如需要）
+        - name: models
+          mountPath: /public
+
+---
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: flux-dev-1
+  namespace: default
+spec:
+  ports:
+  - name: http-flux-dev-1
+    port: 80
+    protocol: TCP
+    targetPort: 7860
+  # The label selector should match the deployment labels & it is useful for prefix caching feature
+  selector:
+    app: flux-dev-1
+  sessionAffinity: None
+  # 指定 LoadBalancer 类型，用于将服务暴露到外部，自动分配公网 IP
+  type: ClusterIP
