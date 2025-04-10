@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inference
+  labels:
+    app: inference
+spec:
+  backoffLimit: 0
+  parallelism: 1
+  template:
+    metadata:
+      name: inference
+      labels:
+        app: inference
+    spec:
+      affinity:
+        nodeAffinity: # Pod 调度亲和性
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU 节点的标签
+                    operator: In
+                    values:
+                      - A800_NVLINK_80GB
+      containers:
+        - name: vllm
+          image: registry-cn-huabei1-internal.ebcloud.com/job-template/vllm-openai-offline:v0.6.6
+          command:
+            - bash
+            - -c
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+          args:
+            - |
+              mkdir -p /prompts
+              cat << 'EOF' > /prompts/sample.txt
+              你是谁打造的 AI？
+              谁训练了你？
+              EOF
+
+              python3 scripts.py \
+                --model /data/models/meta-llama/Meta-Llama-3.1-8B-Instruct \
+                --lora_adapter /adapters/self-cognition \
+                --prompt_file /prompts/sample.txt \
+                --temperature 0.7 \
+                --max_lora_rank 32 \
+                --top_p 0.9
+          resources:
+            requests:
+              cpu: "8"
+              memory: "16Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "10"
+              memory: "32Gi"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: adapters
+              mountPath: /adapters
+              subPath: output
+            - name: public
+              mountPath: /data/models
+              subPath: huggingface-models
+      volumes:
+        - name: public
+          hostPath:
+            path: /public
+            type: DirectoryOrCreate
+        - name: adapters
+          persistentVolumeClaim:
+            claimName: example-output
+      restartPolicy: Never
+      dnsPolicy: ClusterFirst

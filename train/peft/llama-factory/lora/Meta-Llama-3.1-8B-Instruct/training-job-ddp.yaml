@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: self-cognition-peft-ddp-job
+spec:
+  clusterIP: None
+  selector:
+    job-name: self-cognition-peft-ddp-job
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: self-cognition-peft-ddp-job
+spec:
+  completions: 2
+  parallelism: 2
+  completionMode: Indexed
+  template:
+    spec:
+      subdomain: self-cognition-peft-ddp-job
+      affinity:
+        nodeAffinity: # Pod 调度亲和性
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu # GPU 节点的标签
+                    operator: In
+                    values:
+                      - A800_NVLINK_80GB
+      restartPolicy: Never
+      containers:
+        - name: torch
+          image: registry-cn-huabei1-internal.ebcloud.com/job-template/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed-flash-attn
+          imagePullPolicy: Always
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PYTHONUNBUFFERED
+              value: "0"
+            - name: MODEL_NAME
+              value: meta-llama/Meta-Llama-3.1-8B-Instruct
+            - name: GPUS_PER_NODE
+              value: "2"
+            - name: NNODES
+              value: "2"
+            - name: MASTER_PORT
+              value: "12345"
+            - name: EPOCHS
+              value: "5"
+            - name: TRAIN_BATCH_SIZE_PER_DEVICE
+              value: "2"
+            - name: DATASET_DIR
+              value: /app/data
+            - name: DATASET_TEMPLATE
+              value: "llama3"
+            - name: REPORT_TO
+              value: "tensorboard"
+            - name: LOGGING_DIR
+              value: "/app/output/logs"
+            - name: JOB_NAME
+              value: "self-cognition"
+            - name: LORA_RANK
+              value: "32"
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+          command:
+            - bash
+            - -c
+            - |
+              sed -i -E 's/(^|[^[:alpha:]])\{\{author\}\}([^[:alpha:]]|$)/\1Ebtech\2/g' data/identity.json
+              sed -i -E 's/(^|[^[:alpha:]])\{\{name\}\}([^[:alpha:]]|$)/\1EbAssistant\2/g' data/identity.json
+              MASTER_ADDR=self-cognition-peft-ddp-job-0.self-cognition-peft-ddp-job NODE_RANK=${JOB_COMPLETION_INDEX} NCCL_NET=IB NCCL_IB_DISABLE=0 /workspace/peft-script.sh
+          resources:
+            requests:
+              cpu: "8"
+              memory: "16Gi"
+              nvidia.com/gpu: "2"
+              rdma/hca_shared_devices_ib: "2"
+            limits:
+              cpu: "10"
+              memory: "32Gi"
+              nvidia.com/gpu: "2"
+              rdma/hca_shared_devices_ib: "2"
+          volumeMounts:
+            - name: public
+              mountPath: /data/models
+              subPath: huggingface-models
+            - name: public
+              mountPath: /workspace
+              subPath: shared-resources/training-scripts
+            - mountPath: /dev/shm
+              name: dshm
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+            - name: model-cache
+              mountPath: /root/.cache/modelscope
+            - name: workspace
+              mountPath: /app/output
+              subPath: output
+      hostIPC: true
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 80Gi
+        - name: hf-cache
+          emptyDir: {}
+        - name: model-cache
+          emptyDir: {}
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: example-output
+        - name: public
+          hostPath:
+            path: /public
+            type: DirectoryOrCreate
