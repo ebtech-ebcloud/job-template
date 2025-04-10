@@ -25,8 +25,7 @@ spec:
                       - A800_NVLINK_80GB
       containers:
         - name: comfyui
-          image: registry-cn-huabei1-internal.ebcloud.com/job-template/comfyui-boot:cu124-vanilla-main
-          imagePullPolicy: Always
+          image: registry-cn-huabei1-internal.ebcloud.com/job-template/comfyui-boot:cu124-login-node-main
           command:
             - /bin/bash
             - /runner-scripts/minimal-start.sh
