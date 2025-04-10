@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui
+  labels:
+    app: comfyui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: comfyui
+  template:
+    metadata:
+      labels:
+        app: comfyui
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                      - A800_NVLINK_80GB
+      containers:
+        - name: comfyui
+          image: registry-cn-huabei1-internal.ebcloud.com/job-template/comfyui-boot:cu124-vanilla-main
+          imagePullPolicy: Always
+          command:
+            - /bin/bash
+            - /runner-scripts/minimal-start.sh
+          env:
+            - name: CLI_ARGS # 额外的 ComfyUI 启动参数
+              value: ""
+          ports:
+            - containerPort: 8188
+              name: http
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              cpu: "8"
+              memory: "16Gi"
+            requests:
+              nvidia.com/gpu: "1"
+              cpu: "4"
+              memory: "8Gi"
+          volumeMounts:
+            - name: public
+              mountPath: /root/ComfyUI/models/text_encoders
+              subPath: huggingface-models/Comfy-Org/Wan_2.1_ComfyUI_repackaged/split_files/text_encoders
+            - name: public
+              mountPath: /root/ComfyUI/models/vae
+              subPath: huggingface-models/Comfy-Org/Wan_2.1_ComfyUI_repackaged/split_files/vae
+            - name: public
+              mountPath: /root/ComfyUI/models/diffusion_models
+              subPath: huggingface-models/Comfy-Org/Wan_2.1_ComfyUI_repackaged/split_files/diffusion_models
+            - name: public
+              mountPath: /root/ComfyUI/models/clip_vision
+              subPath: huggingface-models/Comfy-Org/Wan_2.1_ComfyUI_repackaged/split_files/clip_vision
+      volumes:
+        - name: public
+          hostPath:
+            path: /public
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comfyui
+spec:
+  type: LoadBalancer # 使用公网 IP
+  ports:
+    - port: 80
+      targetPort: 8188
+      protocol: TCP
+      name: http
+  selector:
+    app: comfyui
