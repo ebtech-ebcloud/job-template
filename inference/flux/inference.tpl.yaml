@@ -36,30 +36,13 @@ spec:
             sizeLimit: "50Gi"
       containers:
       - name: flux-dev
-        image: registry-cn-huabei1-internal.ebcloud.com/nvcr.io/nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
-        # image: registry-cn-huabei1-internal.ebcloud.com/nvcr.io/nvidia/pytorch:25.03-py3
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/flux_1:dev-build1
         command:
           - bash
           - "-c"
           - |
-            apt update && apt install python3 python3.10-venv git libgl1-mesa-glx libglib2.0-0 -y
-            cd "$HOME" && cp -r /public/shared-resources/repos/flux .
-            cd ~/flux && python3 -m venv .venv
-            cd ~/flux && source .venv/bin/activate && pip install -e '.[all,tensorrt]' -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple
-            # use local repos
-            sed -i 's/from_pretrained(/from_pretrained(\"\/public\/huggingface-models\/\" + /g' src/flux/modules/conditioner.py
-            sed -i 's/Falconsai/\/public\/huggingface-models\/Falconsai/g' demo_gr.py
-            # allow remote access
-            sed -i 's/launch(/launch(server_name=\"0.0.0.0\",show_api=False,ssl_verify=False,/g' demo_gr.py
-            # work around for gradio_client: skip additionalProperties check 
-            sed -i 's/if \"additional/if False and \"additional/g' ~/flux/.venv/lib/python3.10/site-packages/gradio_client/utils.py
-            # sleep 3600
-            # loose constraint for torch and nvidia-modelopt
-            # sed -i 's/torch == 2.5.1/torch >= 2.5.1/g' pyproject.toml
-            # sed -i 's/nvidia-modelopt[torch,onnx] ~=/nvidia-modelopt[torch,onnx] >=/g' pyproject.toml
-            cd ~/flux && source .venv/bin/activate && \
-              FLUX_DEV=/public/huggingface-models/black-forest-labs/FLUX.1-dev/flux1-dev.safetensors \
-              AE=/public/huggingface-models/black-forest-labs/FLUX.1-dev/ae.safetensors \
+            cd /root/flux && \
+              source .venv/bin/activate && \
               python3 demo_gr.py --name flux-dev
         env:
           - name: HF_DATASETS_OFFLINE
@@ -68,6 +51,10 @@ spec:
             value: "1"
           - name: HF_HUB_OFFLINE
             value: "1"
+          - name: FLUX_DEV
+            value: "/public/huggingface-models/black-forest-labs/FLUX.1-dev/flux1-dev.safetensors"
+          - name: AE
+            value: "/public/huggingface-models/black-forest-labs/FLUX.1-dev/ae.safetensors"
         ports:
         - containerPort: 7860
         resources:
