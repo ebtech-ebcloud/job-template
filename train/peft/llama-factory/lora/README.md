@@ -44,7 +44,7 @@ export WANDB_PROJECT=my-awesome-project
 
 #### 部署
 
-使用 `wandb server start` 命令启动一个本地的测试 wandb 实例。您也可以使用[容器化等方式](https://docs.wandb.ai/guides/hosting/self-managed/basic-setup/)进行生产级别的部署。
+使用 `wandb server start` 命令启动一个本地的测试 wandb 实例，并参考[官方 QuickStart](https://github.com/wandb/server?tab=readme-ov-file#quickstart) 配置好 License。您也可以使用[容器化等方式](https://docs.wandb.ai/guides/hosting/self-managed/basic-setup/)进行生产级别的部署。
 
 ## 准备训练代码
 
