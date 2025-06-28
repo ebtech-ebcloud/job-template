@@ -18,6 +18,6 @@ export CPU_RESOURCES_LIMITS=${CPU_RESOURCES_LIMITS:-${DEFAULT_CPU_RESOURCES_LIMI
 export MEM_RESOURCES_REQS=${MEM_RESOURCES_REQS_:-${DEFAULT_MEM_RESOURCES_REQS}Gi}
 export MEM_RESOURCES_LIMITS=${MEM_RESOURCES_LIMITS:-${DEFAULT_MEM_RESOURCES_LIMITS}Gi}
 export GPU_SPEC=${GPU_SPEC:-A800_NVLINK_80GB}
-export IMAGE_NAME=${IMAGE_NAME:-"10.5.1.249/bob-base-image/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed"}
+export IMAGE_NAME=${IMAGE_NAME:-"registry-cn-huabei1-internal.ebcloud.com/job-template/lora-peft:cuda-12.1.1-cudnn8-devel-ubuntu22.04-llama-factory-main-pytorch-24.02-py3-deepspeed"}
 
 envsubst '$JOB_NAME $MODEL_NAME $GPUS_PER_NODE $EPOCHS $$TRAIN_BATCH_SIZE_PER_DEVICE $DATASET_TEMPLATE $REPORT_TO $LOGGING_DIR $GPU_SPEC $CPU_RESOURCES_REQS $MEM_RESOURCES_REQS $CPU_RESOURCES_LIMITS $MEM_RESOURCES_LIMITS $IMAGE_NAME' < lora-example-job.tpl.yaml | kubectl replace --force -f -
