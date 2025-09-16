@@ -37,7 +37,7 @@ spec:
             sizeLimit: "50Gi"
       containers:
       - name: inference-compare-a800
-        image:  nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
+        image:  registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250916-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
         command:
           - bash
           - "-c"
