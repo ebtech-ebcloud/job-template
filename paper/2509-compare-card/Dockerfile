@@ -1,0 +1,97 @@
+FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
+
+# silent mode
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    sudo \
+    build-essential \
+    libgl1 \
+    ninja-build \
+    cmake \
+    libnuma1 \
+    libnuma-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# apt-get install -y libgl1
+
+# install miniconda
+RUN curl -LO https://repo.anaconda.com/miniconda/Miniconda3-py312_25.7.0-2-Linux-x86_64.sh && \
+    bash Miniconda3-py312_25.7.0-2-Linux-x86_64.sh -b -p /miniconda && \
+    rm Miniconda3-py312_25.7.0-2-Linux-x86_64.sh
+ENV PATH="/miniconda/bin:$PATH"
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# setup conda env
+RUN conda create -n vllm python=3.12 -y
+
+RUN conda run -n vllm \
+    pip install --no-cache-dir \
+    uv \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n vllm uv pip install vllm==0.10.2 \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n vllm pip cache purge
+
+RUN conda create -n sglang python=3.12 -y
+
+RUN conda run -n sglang \
+    pip install --no-cache-dir \
+    uv \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n sglang uv pip install sglang[all]==0.5.2 \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n sglang pip cache purge
+
+RUN conda create -n diffuser python=3.12 -y
+
+RUN conda run -n diffuser \
+    pip install --no-cache-dir \
+    diffusers \
+    torch transformers protobuf sentencepiece accelerate \
+    torchao \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n diffuser pip cache purge
+
+# special compatibility fix for 4090/4090D
+RUN apt purge cuda-compat-12-4 -y && \
+    ln -f -s /lib/x86_64-linux-gnu/libcuda.so.535.161.08 /lib/x86_64-linux-gnu/libcuda.so.1
+
+RUN /miniconda/bin/conda init --all
+
+# set default apt source to aliyun
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+    sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+
+
+RUN apt update && apt install -y \
+    libglib2.0-0 \
+    openssh-server \
+    nano \
+    iputils-ping \
+    net-tools \
+    iproute2 \
+    telnet \
+    dnsutils \
+    traceroute \
+    tcpdump \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple \
+    jupyterlab
+
+RUN conda install nb_conda_kernels -y
+
+# enable root ssh login
+RUN mkdir -p /etc/ssh && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+
+RUN jupyter server --generate-config && \
+    echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
+
+# docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250915-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
