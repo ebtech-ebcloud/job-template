@@ -36,7 +36,7 @@ spec:
             sizeLimit: "50Gi"
       containers:
       - name: inference-compare-h800
-        image:  registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250916-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
+        image:  registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
         command:
           - bash
           - "-c"
@@ -46,12 +46,12 @@ spec:
             mkdir -p /etc/ssh
             # echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
             # echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
-            # echo "root:eb@0709#PKU" | chpasswd
+            # echo "root:YOUR@PASS#WORD" | chpasswd
             
             # create user ebuser and allow password login
-            useradd -m -s /bin/bash -p $(echo "eb@0709#PKU" | openssl passwd -1 -stdin) ebuser
+            useradd -m -s /bin/bash -p $(echo "YOUR@PASS#WORD" | openssl passwd -1 -stdin) ebuser
             echo "ebuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-            echo "ebuser:eb@0709#PKU" | chpasswd
+            echo "ebuser:YOUR@PASS#WORD" | chpasswd
             echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
             service ssh start -D
             sleep infinity
@@ -118,4 +118,4 @@ spec:
     - protocol: TCP
       port: 63022
       targetPort: 22
-  type: LoadBalancer
+  type: ClusterIP #LoadBalancer

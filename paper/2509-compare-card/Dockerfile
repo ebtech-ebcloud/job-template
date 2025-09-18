@@ -1,4 +1,5 @@
 FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
+# registry-cn-huabei1-internal.ebcloud.com/nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
 
 # silent mode
 ENV DEBIAN_FRONTEND=noninteractive
@@ -94,4 +95,6 @@ RUN mkdir -p /etc/ssh && \
 RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
-# docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250915-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
+COPY run_flux.py /root/run_flux.py
+
+# docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
