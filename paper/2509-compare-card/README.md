@@ -11,6 +11,10 @@
 - 账号注册：https://docs.ebtech.com/docs/quickstart/prepare.html
 - 创建集群：https://docs.ebtech.com/docs/cluster/create.html
 - 连接集群：https://docs.ebtech.com/docs/cluster/attach.html
+- kubectl 常用命令：https://docs.ebtech.com/docs/cluster/command.html
+
+本文将基于我们预装好的镜像启动实验环境，除了下边的启动方式，也可直接使用此镜像作为“外部镜像”启动开发机进行使用：
+- 镜像名称：registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
 
 
 ## LLM Serving with gpt-oss-20b
