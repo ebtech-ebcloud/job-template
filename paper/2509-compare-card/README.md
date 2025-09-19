@@ -1,10 +1,16 @@
 
 # 常见卡型号的单卡负载对比
 
-在开始之前，请确保已创建集群，并将 kubeconfig 配置到了本地默认路径：
-```
-~/.kube/config
-```
+基于英博云（ebcloud.com）平台可快速复现本文的结论。
+> 关于英博云：
+> 英博云提供了企业级 GPU 容器云服务，基于 kubernetes 提供了灵活、易用的 GPU 容器服务。
+
+在开始之前，请确保已创建集群，并安装了 kubectl，且将 kubeconfig 配置到了本地默认路径：`~/.kube/config`
+
+具体操作方式可参考英博云平台的帮助文档：
+- 账号注册：https://docs.ebtech.com/docs/quickstart/prepare.html
+- 创建集群：https://docs.ebtech.com/docs/cluster/create.html
+- 连接集群：https://docs.ebtech.com/docs/cluster/attach.html
 
 
 ## LLM Serving with gpt-oss-20b
