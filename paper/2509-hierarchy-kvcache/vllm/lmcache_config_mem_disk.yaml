@@ -1,0 +1,16 @@
+# Basic configurations
+chunk_size: 256
+
+# CPU offloading configurations
+local_cpu: true
+max_local_cpu_size: 50.0  # 50GB CPU memory limit
+
+# Enable Disk backend
+local_disk: "file:///lmcache_test/local_disk/"
+
+# 50GB of Disk memory
+max_local_disk_size: 50.0
+
+# Disable page cache
+# This should be turned on for better performance if most local CPU memory is used
+extra_config: {'use_odirect': True}

@@ -1,0 +1,9 @@
+# FROM vllm/vllm-openai:v0.10.1.1
+FROM registry-cn-huabei1-internal.ebcloud.com/docker.io/vllm/vllm-openai:v0.10.1.1
+
+RUN mkdir /kv-workspace
+WORKDIR /kv-workspace
+
+COPY *.py ./
+COPY vllm/ ./
+COPY assets/ ./assets/

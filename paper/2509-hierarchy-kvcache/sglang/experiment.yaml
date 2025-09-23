@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sglang-hicache-a800
+  namespace: default
+  labels:
+    app: sglang-hicache-a800
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sglang-hicache-a800
+  template:
+    metadata:
+      labels:
+        app: sglang-hicache-a800
+    spec:
+      affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                      - A800_NVLINK_80GB
+                      # - RTX_4090D
+                      # - H800_NVLINK_80GB      
+      containers:
+      - name: mc-metaserver
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/sglang-with-lmcache:v0.5.3rc1-cu126
+        command:
+          - python
+          - -m
+          - mooncake.http_metadata_server
+        resources:
+          limits:
+            cpu: "1"
+            memory: 4G
+          requests:
+            cpu: "1"
+            memory: 4G
+      - name: mc-master
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/sglang-with-lmcache:v0.5.3rc1-cu126
+        command:
+          - mooncake_master
+          - --eviction_high_watermark_ratio
+          - "0.95"
+        resources:
+          limits:
+            cpu: "1"
+            memory: 4G
+          requests:
+            cpu: "1"
+            memory: 4G
+      - name: mc-store
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/sglang-with-lmcache:v0.5.3rc1-cu126
+        command:
+        - python
+        - -m
+        - mooncake.mooncake_store_service
+        - --config
+        - $(MS_CONFIG_FILE)
+        - --port
+        - "8081"
+        resources:
+          limits:
+            cpu: "1"
+            memory: 4G
+          requests:
+            cpu: "1"
+            memory: 4G
+        env:
+        - name: MC_MS_AUTO_DISC
+          value: "0"
+        - name: MOONCAKE_DEVICE
+          value: ""
+        # Mooncake Store 配置文件路径
+        - name: MS_CONFIG_FILE
+          value: mc-tcp.json
+      - name: sglang
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/sglang-with-lmcache:v0.5.3rc1-cu126
+        env:
+        # 是否启用 Mooncake Store
+        - name: ENABLE_MS
+          value: "true"
+        # 是否启用前缀缓存
+        - name: ENABLE_PREFIX_CACHE
+          value: "true"
+        # 模型名称  
+        - name: MODEL_NAME
+          value: Qwen/Qwen3-14B
+        # 模型路径
+        - name: MODEL_PATH
+          value: /data/models/huggingface-models/Qwen/Qwen3-14B
+        # SGLang 监听端口
+        - name: PORT
+          value: "3000"
+        resources:
+          limits:
+            cpu: "5"
+            memory: 80G
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "5"
+            memory: 80G
+            nvidia.com/gpu: "1"
+        command:
+        - bash
+        - serve-sglang.sh
+        volumeMounts:
+        - name: models
+          mountPath: /data/models
+      - name: devbox
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/sglang-with-lmcache:v0.5.3rc1-cu126
+        env:
+          # 模型名称
+          - name: MODEL_NAME
+            value: Qwen/Qwen3-14B
+          # 模型路径
+          - name: MODEL_PATH
+            value: /data/models/huggingface-models/Qwen/Qwen3-14B
+          # 调用的 SGLang 端口
+          - name: PORT
+            value: "3000"
+        command:
+          - /bin/bash
+          - -c
+          - |
+            sleep infinity
+        resources:
+          limits:
+            cpu: "1"
+            memory: 4G
+          requests:
+            cpu: "1"
+            memory: 4G
+        env:
+          - name: MODEL_NAME
+            value: Qwen/Qwen3-14B
+          - name: MODEL_PATH
+            value: /data/models/huggingface-models/Qwen/Qwen3-14B
+          - name: PORT
+            value: "3000"
+        volumeMounts:
+        - name: models
+          mountPath: /data/models
+      volumes:
+        - name: models
+          hostPath:
+            path: /public

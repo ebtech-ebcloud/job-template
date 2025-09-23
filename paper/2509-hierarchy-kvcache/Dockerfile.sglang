@@ -1,0 +1,9 @@
+# FROM lmsysorg/sglang:v0.5.3rc1-cu126
+FROM registry-cn-huabei1-internal.ebcloud.com/docker.io/lmsysorg/sglang:v0.5.3rc1-cu126
+
+RUN mkdir /kv-workspace
+WORKDIR /kv-workspace
+
+COPY *.py ./
+COPY sglang/ ./
+COPY assets/ ./assets

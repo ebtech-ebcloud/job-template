@@ -1,0 +1,8 @@
+{
+    "local_hostname": "localhost",
+    "metadata_server": "http://localhost:8080/metadata",
+    "master_server_address": "localhost:50051",
+    "protocol": "rdma",
+    "device_name": "mlx5_100,mlx5_101",
+    "global_segment_size": 53687091200
+}

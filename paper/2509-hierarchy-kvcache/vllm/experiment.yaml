@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-lmcache-a800
+  namespace: default
+  labels:
+    app: vllm-lmcache-a800
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-lmcache-a800
+  template:
+    metadata:
+      labels:
+        app: vllm-lmcache-a800
+    spec:
+      affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.ebtech.com/gpu
+                    operator: In
+                    values:
+                      - A800_NVLINK_80GB
+                      # - RTX_4090D
+                      # - H800_NVLINK_80GB
+      containers:
+      - name: vllm
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/vllm-openai-with-lmcache:v0.10.1.1
+        env:
+        # 是否启用 LMCache
+        - name: ENABLE_LMCACHE
+          value: "true"
+        # 是否启用前缀缓存
+        - name: ENABLE_PREFIX_CACHE
+          value: "true"
+        # LMCache 配置文件路径
+        - name: LMCACHE_CONFIG_FILE
+          value: lmcache_config_mem.yaml
+        # VLLM 监听端口
+        - name: PORT
+          value: "8000"
+        # 模型名称
+        - name: MODEL_NAME
+          value: Qwen/Qwen3-14B
+        # 模型路径
+        - name: MODEL_PATH
+          value: /data/models/huggingface-models/Qwen/Qwen3-14B
+        volumeMounts:
+        - name: models
+          mountPath: /data/models
+        command:
+        - bash
+        - serve-vllm.sh
+        resources:
+          limits:
+            cpu: "8"
+            memory: 96G
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "8"
+            memory: 96G
+            nvidia.com/gpu: "1"
+      - name: devbox
+        image: registry-cn-huabei1-internal.ebcloud.com/job-template/vllm-openai-with-lmcache:v0.10.1.1
+        env:
+          # 模型名称
+          - name: MODEL_NAME
+            value: Qwen/Qwen3-14B
+          # 模型路径
+          - name: MODEL_PATH
+            value: /data/models/huggingface-models/Qwen/Qwen3-14B
+          # 调用的 VLLM 端口
+          - name: PORT
+            value: "8000"
+        command:
+          - /bin/bash
+          - -c
+          - |
+            sleep infinity
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2G
+          requests:
+            cpu: "1"
+            memory: 2G
+        env:
+          - name: MODEL_NAME
+            value: Qwen/Qwen3-14B
+          - name: MODEL_PATH
+            value: /data/models/huggingface-models/Qwen/Qwen3-14B
+          - name: PORT
+            value: "8000"
+        volumeMounts:
+        - name: models
+          mountPath: /data/models
+      volumes:
+        - name: models
+          hostPath:
+            path: /public
+          
+        

@@ -1,0 +1,7 @@
+{
+    "local_hostname": "localhost",
+    "metadata_server": "http://localhost:8080/metadata",
+    "master_server_address": "localhost:50051",
+    "protocol": "tcp",
+    "global_segment_size": 53687091200
+}
