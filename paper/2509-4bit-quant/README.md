@@ -7,13 +7,13 @@
 ```
 
 
-## LLM Serving with gpt-oss-20b
+## 4bit LLM Serving with gpt-oss-120b
 
 ### 创建实验环境
 首先，请务必将 yaml 文件中的密码设置部分，`YOUR@PASS#WORD` 替换为自己的密码
 如需 SSH 通过公网 ip:port 登陆，可将 yaml 中，底部的 ssh service 的 spec.type 设置为 LoadBalancer，这样会同步注册一个公网 IP 并分配端口，供 ssh 登陆使用。
 ```
-# 启动 4090 测试节点
+# 启动A800测试节点
 kubectl apply -f inference-compare-4090.yaml 
 
 # 登陆服务器
