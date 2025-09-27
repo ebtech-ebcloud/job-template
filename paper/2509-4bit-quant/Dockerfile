@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     git \
+    wget \
     curl \
     sudo \
     build-essential \
@@ -33,28 +34,50 @@ RUN conda run -n vllm \
     pip install --no-cache-dir \
     uv \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n vllm uv pip install vllm==0.10.2 \
+    conda run -n vllm uv pip install vllm==0.10.2 llmcompressor \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n vllm pip cache purge
 
-RUN conda create -n sglang python=3.12 -y
+RUN conda create -n hfhub python=3.12 -y
+RUN conda run -n hfhub \
+    pip install --no-cache-dir \ uv \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n hfhub uv pip install huggingface-hub==0.25.1 \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n hfhub pip cache purge
 
+RUN conda create -n sglang python=3.12 -y
 RUN conda run -n sglang \
     pip install --no-cache-dir \ uv \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n sglang uv pip install sglang[all]==0.5.2 \
+    conda run -n sglang uv pip install  sglang[all]==0.5.2 \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n sglang pip cache purge
 
-RUN conda create -n diffuser python=3.12 -y
 
-RUN conda run -n diffuser \
+# setup conda env
+RUN conda create -n nunchaku python=3.12 -y
+RUN conda run -n nunchaku \
     pip install --no-cache-dir \
-    diffusers \
-    torch transformers protobuf sentencepiece accelerate \
-    torchao \
+    uv \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n diffuser pip cache purge
+    conda run -n nunchaku uv pip install torch torchvision torchaudio  \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n nunchaku pip cache purge
+RUN wget  https://githubfast.com/nunchaku-tech/nunchaku/releases/download/v0.3.1/nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl && \
+    conda run -n nunchaku pip install nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl && \
+    conda run -n nunchaku pip cache purge
+
+# setup conda env
+RUN conda create -n lmeval python=3.12 -y
+
+RUN conda run -n lmeval \
+    pip install --no-cache-dir \
+    uv \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n lmeval uv pip install lm_eval[vllm] \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n lmeval pip cache purge
 
 # special compatibility fix for 4090/4090D
 RUN apt purge cuda-compat-12-4 -y && \
@@ -94,9 +117,7 @@ RUN mkdir -p /etc/ssh && \
 RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
-COPY run_flux.py /root/run_flux.py
-COPY mamf-finder.py /root/mamf-finder.py
-COPY all_reduce_bench.py /root/all_reduce_bench.py
-COPY test_driver.sh /root/test_driver.sh
+COPY download_gsm.py /root/download_gsm.py
+
 
 # docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
