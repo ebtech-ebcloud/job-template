@@ -60,6 +60,22 @@ python3 -m sglang.bench_serving --backend vllm --port 8000 --seed 100 \
     --request-rate 8 --num-prompts 1 --max-concurrency 10
 ```
 
+### 精度测试
+精度测试用lm-eval工具进行, 需要先准备数据集.
+python download_gsm.py
+然后需要修改/miniconda/envs/lmeval/lib/python3.12/site-packages/lm_eval/tasks/gsm8k/gsm8k-cot.yaml
+将文件开头dataset_path附近修改为:
+dataset_path: arrow
+dataset_kwargs:
+  data_files:
+    train: /root/gsm8k/train/data-00000-of-00001.arrow
+    test: /root/gsm8k/test/data-00000-of-00001.arrow
+然后即可运行lm_eval任务。
+lm_eval --model vllm     --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92     --tasks gsm8k_cot   --batch_size auto     --gen_kwargs="max_gen_toks=2048"
+lm_eval --model vllm     --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.92     --tasks gsm8k_cot   --batch_size auto     --gen_kwargs="max_gen_toks=2048
+
+### 模型量化
+模型量化采用
 
 
 ## Image Generation with FLUX.1-dev
