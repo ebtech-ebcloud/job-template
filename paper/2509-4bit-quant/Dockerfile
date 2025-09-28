@@ -65,7 +65,8 @@ RUN conda run -n nunchaku \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n nunchaku pip cache purge
 RUN wget  https://githubfast.com/nunchaku-tech/nunchaku/releases/download/v0.3.1/nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl && \
-    conda run -n nunchaku pip install nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl && \
+    conda run -n nunchaku uv pip install nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n nunchaku pip cache purge
 
 # setup conda env
@@ -118,7 +119,8 @@ RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
 COPY download_gsm.py /root/download_gsm.py
-COPY gen_fp4.py /root/ gen_fp4.py
-
+COPY quant_fp4.py /root/quant_fp4.py
+COPY flux.1-dev.py /root/flux.1-dev.py
+COPY flux.1-dev-lora.py /root/flux.1-dev-lora.py
 
 # docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04

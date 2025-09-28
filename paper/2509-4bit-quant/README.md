@@ -1,5 +1,5 @@
 
-# 常见卡型号的单卡负载对比
+# 4位量化模型的推理性能评测
 
 在开始之前，请确保已创建集群，并将 kubeconfig 配置到了本地默认路径：
 ```
@@ -7,17 +7,17 @@
 ```
 
 
-## 4bit LLM Serving with gpt-oss-120b
+## 4bit LLM Inference Benchmark
 
 ### 创建实验环境
 首先，请务必将 yaml 文件中的密码设置部分，`YOUR@PASS#WORD` 替换为自己的密码
 如需 SSH 通过公网 ip:port 登陆，可将 yaml 中，底部的 ssh service 的 spec.type 设置为 LoadBalancer，这样会同步注册一个公网 IP 并分配端口，供 ssh 登陆使用。
 ```
 # 启动A800测试节点
-kubectl apply -f inference-compare-4090.yaml 
+kubectl apply -f quant-a800-2cards.yaml
 
 # 登陆服务器
-kubectl exec -it svc/inference-compare-4090-ssh -- bash
+kubectl exec -it svc/quant-a800-ssh -- bash
 ```
 
 ### 启动模型推理服务
@@ -25,11 +25,8 @@ kubectl exec -it svc/inference-compare-4090-ssh -- bash
 ```
 # vllm
 conda activate vllm
-vllm serve /public/huggingface-models/openai/gpt-oss-20b --trust-remote-code --port 8000 --served-model-name openai/gpt-oss-20b --async-scheduling
-
-# sglang，根据卡型号，需在 A800,H800 选择 --cuda-graph-max-bs 256
-conda activate sglang
-python3 -m sglang.launch_server --model /public/huggingface-models/openai/gpt-oss-20b --trust-remote-code --port 8000 --served-model-name openai/gpt-oss-20b --cuda-graph-max-bs 32 --mem-fraction-static 0.92
+MODEL_PATH=/public/huggingface-models/Qwen/Qwen3-32B
+vllm serve $MODEL_PATH --async-scheduling --tensor-parallel-size 2  --served_model_name Qwen/Qwen3-32B
 ```
 
 ### 性能测试
@@ -38,14 +35,14 @@ python3 -m sglang.launch_server --model /public/huggingface-models/openai/gpt-os
 curl localhost:8000/v1/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "openai/gpt-oss-20b",
+    "model": "Qwen/Qwen3-32B",
     "prompt": "Beijing is a ",
     "stream":true,
     "max_tokens": 3000
   }'
 ```
 
-压力测试我们可以使用 sglang bench_serving：
+压力测试我们可以使用 sglang bench\_serving：
 ```
 conda activate sglang
 
@@ -54,37 +51,49 @@ cp /public/huggingface-datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/ShareG
 export HF_ENDPOINT=https://hf-mirror.com
 # 每次运行时调整 --seed 来避免命中 cache
 # 调整压力：--num-prompts 为总请求数量，--max-concurrency 为最大并发数，--request-rate 为每秒发送的请求数
-python3 -m sglang.bench_serving --backend vllm --port 8000 --seed 100 \
-    --model openai/gpt-oss-20b --dataset-name random \
-    --random-output-len 1000 --random-input-len 6000 --random-range-ratio 1 \
-    --request-rate 8 --num-prompts 1 --max-concurrency 10
+MODEL_PATH=/public/huggingface-models/Qwen/Qwen3-32B
+python3 -m sglang.bench_serving --backend vllm \
+    --model $MODEL_PATH \
+    --dataset-name random \
+    --random-range-ratio 1 \
+    --num-prompt 128 \
+    --request-rate 1 \
+    --random-input 2048 \
+    --random-output 2048 \
+    --max-concurrency 32 \
+    --tokenizer $MODEL_PATH --seed $(date +'%H%M%S')
 ```
 
 ### 精度测试
-精度测试用lm-eval工具进行, 需要先准备数据集.
+精度测试用lm\_eval工具进行, 需要先准备数据集.
+```
 python download_gsm.py
-然后需要修改/miniconda/envs/lmeval/lib/python3.12/site-packages/lm_eval/tasks/gsm8k/gsm8k-cot.yaml
-将文件开头dataset_path附近修改为:
+#修改/miniconda/envs/lmeval/lib/python3.12/site-packages/lm_eval/tasks/gsm8k/gsm8k-cot.yaml
+#将文件开头"dataset_path: gsm8k"修改为:
 dataset_path: arrow
 dataset_kwargs:
   data_files:
     train: /root/gsm8k/train/data-00000-of-00001.arrow
     test: /root/gsm8k/test/data-00000-of-00001.arrow
-然后即可运行lm_eval任务。
+```
+
+然后即可运行lm\_eval任务。
+```
 lm_eval --model vllm     --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92     --tasks gsm8k_cot   --batch_size auto     --gen_kwargs="max_gen_toks=2048"
 lm_eval --model vllm     --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.92     --tasks gsm8k_cot   --batch_size auto     --gen_kwargs="max_gen_toks=2048
+```
 
 ### 模型量化
-模型量化采用
+模型量化采用/root/quant\_fp4.py
 
 
 ## Image Generation with FLUX.1-dev
 
 直接激活环境并运行即可，在 4090 上运行 BF16 版本的模型时，需要开启 CPU offload，否则显存不足以容纳完整的模型权重。
 ```
-conda activate diffuser
-# 默认使用原版 bf16 格式的模型，不开启 cpu offload
-python /root/run_flux.py
-# 4090 使用原版 bf16 格式的模型生成时，需要开启 CPU offload
-CPU_OFFLOAD=1 python /root/run_flux.py
+conda activate nunchaku 
+#利用nunchaku的transformer流程运行4位flux.1-dev模型
+python /root/flux.1-dev.py
+#在上述模型上叠加lora训练的模型
+python /root/flux.1-dev-lora.py
 ```
