@@ -42,7 +42,7 @@ RUN conda create -n hfhub python=3.12 -y
 RUN conda run -n hfhub \
     pip install --no-cache-dir \ uv \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n hfhub uv pip install huggingface-hub==0.25.1 \
+    conda run -n hfhub uv pip install huggingface-hub==0.25.1 datasets \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n hfhub pip cache purge
 
@@ -118,6 +118,7 @@ RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
 COPY download_gsm.py /root/download_gsm.py
+COPY gen_fp4.py /root/ gen_fp4.py
 
 
 # docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
