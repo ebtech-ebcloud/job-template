@@ -26,22 +26,10 @@ kubectl exec -it svc/quant-a800-ssh -- bash
 # vllm
 conda activate vllm
 MODEL_PATH=/public/huggingface-models/Qwen/Qwen3-32B
-vllm serve $MODEL_PATH --async-scheduling --tensor-parallel-size 2  --served_model_name Qwen/Qwen3-32B
+vllm serve $MODEL_PATH --async-scheduling --tensor-parallel-size 2
 ```
 
 ### 性能测试
-使用 curl 进行单请求的功能测试：
-```
-curl localhost:8000/v1/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen3-32B",
-    "prompt": "Beijing is a ",
-    "stream":true,
-    "max_tokens": 3000
-  }'
-```
-
 压力测试我们可以使用 sglang bench\_serving：
 ```
 conda activate sglang
@@ -79,8 +67,8 @@ dataset_kwargs:
 
 然后即可运行lm\_eval任务。
 ```
-lm_eval --model vllm     --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92     --tasks gsm8k_cot   --batch_size auto     --gen_kwargs="max_gen_toks=2048"
-lm_eval --model vllm     --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.92     --tasks gsm8k_cot   --batch_size auto     --gen_kwargs="max_gen_toks=2048
+lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92 --tasks gsm8k_cot --batch_size auto --gen_kwargs="max_gen_toks=2048"
+lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.92 --tasks gsm8k_cot --batch_size auto --gen_kwargs="max_gen_toks=2048
 ```
 
 ### 模型量化
