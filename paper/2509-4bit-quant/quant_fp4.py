@@ -11,7 +11,7 @@ MODEL_ID = "/data/models/Qwen/Qwen3-32B"
 model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype="auto")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
-DATASET_ID = "HuggingFaceH4/ultrachat_200k"
+DATASET_ID = "/root/ultrachat_200k"
 DATASET_SPLIT = "train_sft"
 
 # Select number of samples. 512 samples is a good place to start.
