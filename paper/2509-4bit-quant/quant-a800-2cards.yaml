@@ -35,7 +35,6 @@ spec:
             sizeLimit: "30Gi"
       containers:
       - name: quant-a800
-        #image:  registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
         image:  registry-cn-huabei1-internal.ebcloud.com/job-template/quant4bit:250928
         command:
           - bash
