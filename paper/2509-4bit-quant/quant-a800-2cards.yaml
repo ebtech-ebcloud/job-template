@@ -36,6 +36,7 @@ spec:
       containers:
       - name: quant-a800
         image:  registry-cn-huabei1-internal.ebcloud.com/job-template/quant4bit:250928
+        imagePullPolicy: Always
         command:
           - bash
           - "-c"
