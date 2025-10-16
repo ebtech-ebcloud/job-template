@@ -5,7 +5,9 @@
 
 
 不要 100 美元！30 美元成本，即可完整复现 Karpathy 大神的手搓 ChatGPT 项目：nanochat。
+
 本周一，特斯拉前 AI 总监、OpenAI 创始成员的 AI 大神 Andrej Karpathy 发布了最新的开源工作，nanochat。这一项目用最少依赖的单一代码库实现了简易版 ChatGPT，并提供了类 chatGPT 的网页。您可以使用一台8卡 H100 服务器，耗时约 4 小时即可完成模型训练，然后体验自己手搓的模型。该项目在 Github上发布后，短短两天时间 star数已经飙升至 16k。
+
 本文使用英博云（https://www.ebcloud.com/）8卡 A800资源进行了快速的全流程复现，Pretrain 阶段耗时约 7 小时，以目前英博云的公开价格，只需 360 元。叠加首充送 100、注册认证送 50 等活动后，仅需约 200 元，即不到 30 美元您也可以快速进行流程复现。
 
 ![promotion](image/promotion.png)
@@ -16,7 +18,7 @@
 ![pretrain-log](image/pretrain-log.png)
 ![pretrain-metrics](image/pretrain-metrics.png)
 
-接下来，我们将详细说明复现流程。本文主要基于 nanochat 代码仓库（https://github.com/karpathy/nanochat）和作者的复现指引（https://github.com/karpathy/nanochat/discussions/1）进行，读者可自行搭配阅读。
+接下来，我们将详细说明复现流程。本文主要基于 [nanochat 代码仓库](https://github.com/karpathy/nanochat) 和作者的 [复现指引](https://github.com/karpathy/nanochat/discussions/1) 进行，读者可自行搭配阅读。
 
 
 ## 资源准备
@@ -45,6 +47,7 @@ source "$HOME/.cargo/env"
 
 ### 使用训练好的模型
 我们提供了一份训练好的模型，以及完整的中间产物，无需自行训练数个小时，可以直接体验模型评估、mid-training、sft 以及对话等功能。
+
 在 JupyterLab Terminal 中执行以下命令将完整环境拷贝到 nanochat 的指定路径：
 
 ```bash
@@ -65,7 +68,7 @@ cp -r /public/shared-resources/cache/nanochat-cache/huggingface/ /root/.cache/
 40K     /root/.cache/nanochat/report
 1.1M    /root/.cache/nanochat/tokenizer/
 ```
-如果您想完整体验复现流程，从 0 开始运行所有训练、评估等过程，您可以跳过当前步骤，并按本文的后续步骤依次运行数据准备、tokenizer 训练、pretraining、mid-training、sft 等流程
+如果您想完整体验复现流程，从 0 开始运行所有训练、评估等过程，您可以跳过当前步骤，并按本文的后续步骤依次运行数据准备、tokenizer 训练、pretraining、mid-training、sft 等流程。
 
 ### 数据准备
 我们提前下载好了数据集，只需要把必要的数据拷贝到 nanochat 指定的路径即可。参考作者的说明，我们使用前 240 个 shard 作为本次的训练集。
@@ -158,7 +161,8 @@ base_eval 的输入如下所示：
 
 ### Midtraining 指令调优
 我们在上一阶段训练出的模型只会根据输入预测下一个 token，进行文本补全，这是因为我们的训练数据集都是一篇一篇完整的独立文章。
-当前这一部分，我们将切换使用对话类型的训练数据集 HuggingFaceTB/smol-smoltalk，使用和 pretraining 完全相同的训练方式，让模型从数据集中学会使用 OpenAI Harmony 格式，生成对话的响应。
+
+当前这一部分，我们将切换使用对话类型的训练数据集 `HuggingFaceTB/smol-smoltalk`，使用和 pretraining 完全相同的训练方式，让模型从数据集中学会使用 OpenAI Harmony 格式，生成对话的响应。
 
 ```text
 <|bos|>
@@ -183,6 +187,7 @@ torchrun --standalone --nproc_per_node=8 -m scripts.chat_eval -- -i mid
 
 ### Supervised Finetuning (SFT)
 接下来，我们将进行 SFT。这里将是一轮额外的对话场景的训练，这一轮应该选择高质量数据进行，如需针对模型生成内容的安全性进行训练，也应该在这里完成。
+
 本轮的数据在训练时，并不会将数据头尾相连直接喂给模型了，而是将每个独立的数据行 padding 到指定长度，来模拟使用模型进行推理服务时的格式。
 
 ```bash
