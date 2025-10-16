@@ -8,7 +8,7 @@
 
 本周一，特斯拉前 AI 总监、OpenAI 创始成员的 AI 大神 Andrej Karpathy 发布了最新的开源工作，nanochat。这一项目用最少依赖的单一代码库实现了简易版 ChatGPT，并提供了类 chatGPT 的网页。您可以使用一台8卡 H100 服务器，耗时约 4 小时即可完成模型训练，然后体验自己手搓的模型。该项目在 Github上发布后，短短两天时间 star数已经飙升至 16k。
 
-本文使用英博云（https://www.ebcloud.com/）8卡 A800资源进行了快速的全流程复现，Pretrain 阶段耗时约 7 小时，以目前英博云的公开价格，只需 360 元。叠加首充送 100、注册认证送 50 等活动后，仅需约 200 元，即不到 30 美元您也可以快速进行流程复现。
+本文使用 [英博云](https://www.ebcloud.com/) 8卡 A800资源进行了快速的全流程复现，Pretrain 阶段耗时约 7 小时，以目前英博云的公开价格，只需 360 元。叠加首充送 100、注册认证送 50 等活动后，仅需约 200 元，即不到 30 美元您也可以快速进行流程复现。
 
 ![promotion](image/promotion.png)
 
@@ -222,6 +222,7 @@ python -m scripts.chat_web
 ```bash
 kubectl port-forward <pod-name> 8000:8000
 ```
+kubectl 的配置方式可参考帮助文档 https://docs.ebcloud.com/docs/cluster/attach.html 。
 
 其中，`<pod-name>` 为具体的 pod 名称，可使用 `kubectl get pod -o wide` 来查看，最左侧即为 pod name。
 
@@ -231,7 +232,8 @@ kubectl port-forward <pod-name> 8000:8000
 
 ![chat-web](image/chat-web.png)
 
-> 如需对外暴露服务以随时随地进行访问，可参考文档快速申请公网 IP 来使用：https://docs.ebtech.com/docs/devmachine/network.html。
+> 如需对外暴露服务以随时随地进行访问，可参考英博云的 [帮助文档](https://docs.ebtech.com/docs/devmachine/network.html) 快速申请公网 IP 来使用。
+> 
 > 使用完成后，删除服务释放公网 IP，就会停止计费。
 
 ### Reinforcement Learning (RL)
