@@ -50,11 +50,7 @@ ds = ds.map(tokenize, remove_columns=ds.column_names)
 #   * quantize the weights to fp4 with per group 16 via ptq
 #   * calibrate a global_scale for activations, which will be used to
 #       quantize activations to fp4 on the fly
-#recipe = QuantizationModifier(targets="Linear", scheme="NVFP4", ignore=["lm_head"])
-recipe = [
-    AWQModifier(ignore=["lm_head"], scheme="W4A16_ASYM", targets=["Linear"]),
-]
-
+recipe = QuantizationModifier(targets="Linear", scheme="NVFP4", ignore=["lm_head"])
 # Save to disk in compressed-tensors format.
 SAVE_DIR = MODEL_ID.rstrip("/").split("/")[-1] + "-NVFP4"
 
