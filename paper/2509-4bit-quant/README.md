@@ -52,23 +52,14 @@ python3 -m sglang.bench_serving --backend vllm \
 
 ### 精度测试
 精度测试用lm\_eval工具进行, 数据集已经放在/root/gsm8k.
-#```
-#python download_gsm.py
-##修改/miniconda/envs/lmeval/lib/python3.12/site-packages/lm_eval/tasks/gsm8k/gsm8k-cot.yaml
-##将文件开头"dataset_path: gsm8k"修改为:
-#dataset_path: arrow
-#dataset_kwargs:
-#  data_files:
-#    train: /root/gsm8k/train/data-00000-of-00001.arrow
-#    test: /root/gsm8k/test/data-00000-of-00001.arrow
-#```
-
 然后即可运行lm\_eval任务。
 ```
-lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92 \
---tasks gsm8k-cot --batch_size auto --gen_kwargs="max_gen_toks=2048" --include_path /root
-lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.8 \
---tasks gsm8k-cot --batch_size auto --gen_kwargs="max_gen_toks=2048 --include_path /root
+lm_eval --model vllm --model_args \
+    pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92 \
+    --tasks gsm8k-cot --batch_size auto --gen_kwargs="max_gen_toks=2048" --include_path /root
+lm_eval --model vllm --model_args \
+    pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.8 \
+    --tasks gsm8k-cot --batch_size auto --gen_kwargs="max_gen_toks=2048 --include_path /root
 ```
 
 ### 模型量化
