@@ -32,10 +32,8 @@ vllm serve $MODEL_PATH --async-scheduling --tensor-parallel-size 2
 ### 性能测试
 压力测试我们可以使用 sglang bench\_serving：
 ```
-conda activate sglang
-
+conda activate vllm
 cp /public/huggingface-datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-
 export HF_ENDPOINT=https://hf-mirror.com
 # 每次运行时调整 --seed 来避免命中 cache
 # 调整压力：--num-prompts 为总请求数量，--max-concurrency 为最大并发数，--request-rate 为每秒发送的请求数
@@ -53,7 +51,7 @@ python3 -m sglang.bench_serving --backend vllm \
 ```
 
 ### 精度测试
-精度测试用lm\_eval工具进行, 需要先准备数据集.
+精度测试用lm\_eval工具进行, 数据集已经放在/root/gsm8k.
 #```
 #python download_gsm.py
 ##修改/miniconda/envs/lmeval/lib/python3.12/site-packages/lm_eval/tasks/gsm8k/gsm8k-cot.yaml
@@ -67,8 +65,8 @@ python3 -m sglang.bench_serving --backend vllm \
 
 然后即可运行lm\_eval任务。
 ```
-lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92 --tasks gsm8k_cot --batch_size auto --gen_kwargs="max_gen_toks=2048"
-lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.92 --tasks gsm8k_cot --batch_size auto --gen_kwargs="max_gen_toks=2048
+lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B,tensor_parallel_size=2,dtype=auto,gpu_memory_utilization=0.92 --tasks gsm8k-cot --batch_size auto --gen_kwargs="max_gen_toks=2048" --include_path /root
+lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwen3-32B-AWQ,tensor_parallel_size=1,dtype=auto,gpu_memory_utilization=0.92 --tasks gsm8k-cot --batch_size auto --gen_kwargs="max_gen_toks=2048 --include_path /root
 ```
 
 ### 模型量化
@@ -76,7 +74,6 @@ lm_eval --model vllm --model_args pretrained=/public/huggingface-models/Qwen/Qwe
 
 
 ## Image Generation with FLUX.1-dev
-
 直接激活环境并运行即可，在 4090 上运行 BF16 版本的模型时，需要开启 CPU offload，否则显存不足以容纳完整的模型权重。
 ```
 conda activate nunchaku 
