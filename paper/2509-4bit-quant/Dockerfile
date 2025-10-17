@@ -122,5 +122,6 @@ COPY download_gsm.py /root/download_gsm.py
 COPY quant_fp4.py /root/quant_fp4.py
 COPY flux.1-dev.py /root/flux.1-dev.py
 COPY flux.1-dev-lora.py /root/flux.1-dev-lora.py
+COPY gsm8k /root/gsm8k
 
 # docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
