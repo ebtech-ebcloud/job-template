@@ -52,6 +52,8 @@ python3 -m sglang.bench_serving --backend vllm \
 
 ### 精度测试
 精度测试用lm\_eval工具进行, 数据集已经放在/root/gsm8k.
+数据集的处理参考如下链接:
+https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/new\_task\_guide.md#using-local-datasets
 然后即可运行lm\_eval任务。
 ```
 lm_eval --model vllm --model_args \
