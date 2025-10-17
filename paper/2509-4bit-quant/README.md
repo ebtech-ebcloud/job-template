@@ -54,16 +54,16 @@ python3 -m sglang.bench_serving --backend vllm \
 
 ### 精度测试
 精度测试用lm\_eval工具进行, 需要先准备数据集.
-```
-python download_gsm.py
-#修改/miniconda/envs/lmeval/lib/python3.12/site-packages/lm_eval/tasks/gsm8k/gsm8k-cot.yaml
-#将文件开头"dataset_path: gsm8k"修改为:
-dataset_path: arrow
-dataset_kwargs:
-  data_files:
-    train: /root/gsm8k/train/data-00000-of-00001.arrow
-    test: /root/gsm8k/test/data-00000-of-00001.arrow
-```
+#```
+#python download_gsm.py
+##修改/miniconda/envs/lmeval/lib/python3.12/site-packages/lm_eval/tasks/gsm8k/gsm8k-cot.yaml
+##将文件开头"dataset_path: gsm8k"修改为:
+#dataset_path: arrow
+#dataset_kwargs:
+#  data_files:
+#    train: /root/gsm8k/train/data-00000-of-00001.arrow
+#    test: /root/gsm8k/test/data-00000-of-00001.arrow
+#```
 
 然后即可运行lm\_eval任务。
 ```

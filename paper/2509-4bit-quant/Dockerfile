@@ -34,7 +34,7 @@ RUN conda run -n vllm \
     pip install --no-cache-dir \
     uv \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n vllm uv pip install vllm==0.10.2 llmcompressor \
+    conda run -n vllm uv pip install vllm==0.10.2 llmcompressor sglang \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n vllm pip cache purge
 
@@ -46,13 +46,13 @@ RUN conda run -n hfhub \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n hfhub pip cache purge
 
-RUN conda create -n sglang python=3.12 -y
-RUN conda run -n sglang \
-    pip install --no-cache-dir \ uv \
-    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n sglang uv pip install  sglang[all]==0.5.2 \
-    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n sglang pip cache purge
+#RUN conda create -n sglang python=3.12 -y
+#RUN conda run -n sglang \
+#    pip install --no-cache-dir \ uv \
+#    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+#    conda run -n sglang uv pip install  sglang[all]==0.5.2 \
+#    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+#    conda run -n sglang pip cache purge
 
 
 # setup conda env
@@ -64,8 +64,9 @@ RUN conda run -n nunchaku \
     conda run -n nunchaku uv pip install torch torchvision torchaudio  \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n nunchaku pip cache purge
-RUN wget  https://githubfast.com/nunchaku-tech/nunchaku/releases/download/v0.3.1/nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl && \
-    conda run -n nunchaku uv pip install nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl \
+COPY nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl /tmp/nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl
+#RUN wget  https://githubfast.com/nunchaku-tech/nunchaku/releases/download/v0.3.1/nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl && \
+RUN  conda run -n nunchaku uv pip install /tmp/nunchaku-0.3.1+torch2.7-cp312-cp312-linux_x86_64.whl \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n nunchaku pip cache purge
 
@@ -118,10 +119,11 @@ RUN mkdir -p /etc/ssh && \
 RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
-COPY download_gsm.py /root/download_gsm.py
+#COPY download_gsm.py /root/download_gsm.py
 COPY quant_fp4.py /root/quant_fp4.py
 COPY flux.1-dev.py /root/flux.1-dev.py
 COPY flux.1-dev-lora.py /root/flux.1-dev-lora.py
 COPY gsm8k /root/gsm8k
+COPY gsm8k-cot.yaml /root/gsm8k-cot.yaml
 
 # docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
