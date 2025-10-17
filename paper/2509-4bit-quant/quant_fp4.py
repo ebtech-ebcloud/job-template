@@ -51,7 +51,6 @@ ds = ds.map(tokenize, remove_columns=ds.column_names)
 #   * calibrate a global_scale for activations, which will be used to
 #       quantize activations to fp4 on the fly
 recipe = QuantizationModifier(targets="Linear", scheme="NVFP4", ignore=["lm_head"])
-
 # Save to disk in compressed-tensors format.
 SAVE_DIR = MODEL_ID.rstrip("/").split("/")[-1] + "-NVFP4"
 
