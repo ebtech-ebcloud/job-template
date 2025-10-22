@@ -1,6 +1,5 @@
 #!/bin/bash
-#准备ComfyUI环境，主要是需要 4 个模型文件
-#本应用需要两个clip文件
+#准备ComfyUI环境，主要是需要 5个模型文件:2个clip文件，1 个vae文件, 1个unet文件, 1个lora文件
 cp /public/huggingface-models/openai/clip-vit-large-patch14/model.safetensors /data/ComfyUI/models/clip/clip-vit-large-patch14.safetensors
 cp /public/huggingface-models/comfyanonymous/flux_text_encoders/t5xxl_fp8_e4m3fn.safetensors /data/ComfyUI/models/clip/
 cp /public/huggingface-models/black-forest-labs/FLUX.1-dev/vae/diffusion_pytorch_model.safetensors  /data/ComfyUI/models/vae/
