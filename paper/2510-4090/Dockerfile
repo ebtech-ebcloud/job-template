@@ -38,7 +38,7 @@ RUN conda run -n comfyui \
     pip install --no-cache-dir \
     uv \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
-    conda run -n comfyui uv pip install torch torchvision torchaudio pyyaml \
+    conda run -n comfyui uv pip install torch torchvision torchaudio modelscope gguf \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n comfyui uv pip install -r /root/ComfyUI/requirements.txt \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
@@ -99,8 +99,7 @@ RUN mkdir -p /etc/ssh && \
 RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
-##COPY download_gsm.py /root/download_gsm.py
-#COPY quant_fp4.py /root/quant_fp4.py
+COPY prep_comfyui.sh /root/prep_comfyui.sh 
 #COPY flux.1-dev.py /root/flux.1-dev.py
 #COPY flux.1-dev-lora.py /root/flux.1-dev-lora.py
 #COPY gsm8k /root/gsm8k
