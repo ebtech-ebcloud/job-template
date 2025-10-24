@@ -168,7 +168,7 @@
         "Node name for S&R": "VAELoader"
       },
       "widgets_values": [
-        "flux_vae.safetensors"
+        "diffusion_pytorch_model.safetensors"
       ]
     },
     {
