@@ -1,0 +1,175 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  annotations:
+    eks.ebcloud.com/enable-spot: "false"
+    eks.ebcloud.com/gang-min-member: "2"
+  name: nano-dist
+spec:
+  # torchrun --nproc_per_node 参数
+  nprocPerNode: "8"
+  runPolicy:
+    # 任务重试次数
+    backoffLimit: 3
+    # 任务退出后的 Pod 清理策略，及时清理可以避免产生额外费用
+    # 请注意将训练日志持久化到 PVC 或外部存储避免丢失
+    cleanPodPolicy: Running
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  # 按需选择合适的 GPU 类型和驱动版本
+                  - matchExpressions:
+                      - key: cloud.ebtech.com/gpu
+                        operator: In
+                        values:
+                          - A800_NVLINK_80GB
+                      - key: cloud.ebtech.com/gpu-driver
+                        operator: In
+                        values:
+                          - 580.65.06
+          containers:
+            # 使用 PET_ 开头的环境变量
+            # 持久化训练日志到 /workdir 目录
+            - command:
+                - /bin/bash
+                - -c
+                - |
+                  cd /root/nanochat
+                  source .venv/bin/activate
+                  source "$HOME/.cargo/env"
+                  torchrun --nnodes=$(PET_NNODES) \
+                      --node_rank=$(PET_NODE_RANK) \
+                      --master_addr=$(PET_MASTER_ADDR) \
+                      --nproc_per_node=$(PET_NPROC_PER_NODE) \
+                      --master_port=$(PET_MASTER_PORT) \
+                      -m scripts.base_train \
+                      -- --depth=20 \
+                      --device_batch_size=32 \
+                      --total_batch_size=1048576 \
+                      2>&1 | tee $(NANOCHAT_BASE_DIR)/master-$(RANK)-training.log
+              env:
+                - name: NANOCHAT_BASE_DIR
+                  value: /workdir/kf-dist
+                # NCCL 配置
+                - name: NCCL_IB_HCA
+                  value: "mlx5_100,mlx5_101,mlx5_102,mlx5_103,mlx5_104,mlx5_105,mlx5_106,mlx5_107"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+              # 如需使用 RDMA，请确保镜像中已安装 rdma 相关依赖
+              image: registry-cn-huabei1-internal.ebcloud.com/job-template/nanochat:c75fe54
+              name: pytorch
+              resources:
+                limits:
+                  nvidia.com/gpu: 8
+                  rdma/hca_shared_devices_ib: 8
+              volumeMounts:
+                # 英博云公共存储卷挂载到 /public 目录
+                - mountPath: /public
+                  name: public-shared
+                - mountPath: /dev/shm
+                  name: shmem
+                # 用户弹性存储卷挂载到 /workdir 目录
+                - name: workdir
+                  mountPath: /workdir
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+          volumes:
+            # 英博云公共存储卷
+            - hostPath:
+                path: /public
+                type: ""
+              name: public-shared
+            - emptyDir:
+                medium: Memory
+              name: shmem
+            # 用户弹性存储卷
+            - name: workdir
+              persistentVolumeClaim:
+                claimName: workdir
+    Worker:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  # 按需选择合适的 GPU 类型和驱动版本
+                  - matchExpressions:
+                      - key: cloud.ebtech.com/gpu
+                        operator: In
+                        values:
+                          - A800_NVLINK_80GB
+                      - key: cloud.ebtech.com/gpu-driver
+                        operator: In
+                        values:
+                          - 580.65.06
+          containers:
+            # 使用 PET_ 开头的环境变量
+            - command:
+                - /bin/bash
+                - -c
+                - |
+                  cd /root/nanochat
+                  source .venv/bin/activate
+                  source "$HOME/.cargo/env"
+                  torchrun --nnodes=$(PET_NNODES) \
+                      --node_rank=$(PET_NODE_RANK) \
+                      --master_addr=$(PET_MASTER_ADDR) \
+                      --nproc_per_node=$(PET_NPROC_PER_NODE) \
+                      --master_port=$(PET_MASTER_PORT) \
+                      -m scripts.base_train \
+                      -- --depth=20 \
+                      --device_batch_size=32 \
+                      --total_batch_size=1048576 \
+                      2>&1 | tee $(NANOCHAT_BASE_DIR)/worker-$(RANK)-training.log
+              env:
+                - name: NANOCHAT_BASE_DIR
+                  value: /workdir/kf-dist
+                # NCCL 配置
+                - name: NCCL_IB_HCA
+                  value: "mlx5_100,mlx5_101,mlx5_102,mlx5_103,mlx5_104,mlx5_105,mlx5_106,mlx5_107"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+              image: registry-cn-huabei1-internal.ebcloud.com/job-template/nanochat:c75fe54
+              name: pytorch
+              resources:
+                limits:
+                  nvidia.com/gpu: 8
+                  rdma/hca_shared_devices_ib: 8
+              volumeMounts:
+                # 英博云公共存储卷挂载到 /public 目录
+                - mountPath: /public
+                  name: public-shared
+                - mountPath: /dev/shm
+                  name: shmem
+                # 用户弹性存储卷挂载到 /workdir 目录
+                - name: workdir
+                  mountPath: /workdir
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+          volumes:
+            # 英博云公共存储卷
+            - hostPath:
+                path: /public
+                type: ""
+              name: public-shared
+            - emptyDir:
+                medium: Memory
+              name: shmem
+            # 用户弹性存储卷
+            - name: workdir
+              persistentVolumeClaim:
+                claimName: workdir
