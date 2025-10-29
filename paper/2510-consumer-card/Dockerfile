@@ -60,6 +60,29 @@ RUN conda run -n sglang \
     -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
     conda run -n sglang pip cache purge
 
+#prepare openwebui env
+WORKDIR /root
+RUN git clone --depth 1 https://githubfast.com/open-webui/open-webui.git
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+RUN apt-get install -y nodejs
+WORKDIR /root/open-webui
+#RUN  npm config set registry https://registry.npmmirror.com && \
+#RUN export no_proxy=localhost,127.0.0.1,modelscope.com,aliyuncs.com,tencentyun.com,wisemodel.cn,10.0.0.0/8,npmmirror.com && export http_proxy=http://10.5.22.200:3128 && export https_proxy=http://10.5.22.200:3128 &&\
+RUN export no_proxy=localhost,127.0.0.1,modelscope.com,aliyuncs.com,tencentyun.com,wisemodel.cn,registry.npmjs.org && export http_proxy=http://10.5.22.200:3128 && export https_proxy=http://10.5.22.200:3128 &&\
+npm config set registry https://registry.npmjs.org && \
+npm install --force &&\
+npm run build &&\
+unset http_proxy https_proxy
+RUN conda create -n open-webui python=3.12 -y
+RUN conda run -n open-webui \
+    pip install --no-cache-dir \ uv \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n open-webui uv pip install  -r /root/open-webui/backend/requirements.txt -U \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n open-webui uv pip install  "mineru[core]" -U \
+    -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple && \
+    conda run -n open-webui pip cache purge
+
 
 ## special compatibility fix for 4090/4090D
 RUN apt purge cuda-compat-12-4 -y && \
@@ -83,7 +106,9 @@ RUN apt update && apt install -y \
     dnsutils \
     traceroute \
     tcpdump \
+    vim \
     wget \
+    lsof \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -i https://mirror-cn-huabei1-internal.ebcloud.com/repository/pypi/simple \
@@ -100,6 +125,7 @@ RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
 COPY prep_comfyui.sh /root/prep_comfyui.sh 
+COPY start_owu.sh /root/start_owu.sh 
 #COPY flux.1-dev.py /root/flux.1-dev.py
 #COPY flux.1-dev-lora.py /root/flux.1-dev-lora.py
 #COPY gsm8k /root/gsm8k
