@@ -1,6 +1,6 @@
 #!/bin/bash
-#假定数据盘的挂载点为/data/,把ComfyUI拷贝到/data,避免模型文件太大撑爆系统盘
 source /miniconda/bin/activate comfyui
+#假定数据盘的挂载点为/data/,把ComfyUI拷贝到/data,避免模型文件太大撑爆系统盘
 cp -r /root/ComfyUI /data/
 #准备ComfyUI需要的模型，主要是需要 5个模型文件:2个clip文件，1 个vae文件, 1个unet文件, 1个lora文件
 #其中有两个文件在拷贝后需要改名,在英博云平台上已经放到/public/shared-resources/cache/ComfyUI/目录下
