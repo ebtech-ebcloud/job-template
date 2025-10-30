@@ -120,15 +120,10 @@ RUN conda install nb_conda_kernels -y
 RUN mkdir -p /etc/ssh && \
     echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
     echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
-
+# start jupyter server
 RUN jupyter server --generate-config && \
     echo "c.ServerApp.terminado_settings = {'shell_command': ['/bin/bash']}" >> /root/.jupyter/jupyter_server_config.py
 
 COPY prep_comfyui.sh /root/prep_comfyui.sh 
 COPY start_owu.sh /root/start_owu.sh 
-#COPY flux.1-dev.py /root/flux.1-dev.py
-#COPY flux.1-dev-lora.py /root/flux.1-dev-lora.py
-#COPY gsm8k /root/gsm8k
-#COPY gsm8k-cot.yaml /root/gsm8k-cot.yaml
-#
-## docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/inference-compare:250918-1-vllm0.10.2-sglang0.5.2-diffusers0.35.1-cuda12.4.1-ubuntu22.04
+#docker build --network host -f Dockerfile . -t registry-cn-huabei1-internal.ebcloud.com/job-template/consumer-card:0.1.0

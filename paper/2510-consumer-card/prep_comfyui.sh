@@ -3,7 +3,7 @@
 source /miniconda/bin/activate comfyui
 cp -r /root/ComfyUI /data/
 #准备ComfyUI需要的模型，主要是需要 5个模型文件:2个clip文件，1 个vae文件, 1个unet文件, 1个lora文件
-#其中有两个文件在拷贝后需要改名
+#其中有两个文件在拷贝后需要改名,在英博云平台上已经放到/public/shared-resources/cache/ComfyUI/目录下
 cp -r /public/shared-resources/cache/ComfyUI/* /data/ComfyUI/
 #如果需要自己下载模型，可以采用如下方式
 #modelscope download --model FluxLora/XLabs-AI-flux-RealismLora --local_dir XLabs-AI-flux-RealismLora
