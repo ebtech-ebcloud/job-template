@@ -8,7 +8,7 @@
 ## ComfyUI应用
 bash prep\_comfyui.sh
 然后在本地界面用ssh建立本机8080端口和开发机8080端口的端口转发，即可在本地用浏览器访问8080端口。
-![示例图片](paper/2510-consumer-card/comb.jpg)
+![示例图片](comb.jpg)
 生成微信技术博客的四张图片(见上图)的Flux.1-dev的文本prompt分别为:
 Astronaut in a jungle, cold color palette, muted colors, very detailed, sharp focus
 
