@@ -15,6 +15,8 @@ spec:
     metadata:
       labels:
         app: inference-compare-4090
+      annotations:
+        eks.ebcloud.com/enable-spot: "true"
     spec:
       affinity: # Pod调度亲和性，选择合适的 GPU 卡型号
         nodeAffinity:
@@ -24,7 +26,7 @@ spec:
                   - key: cloud.ebtech.com/gpu
                     operator: In
                     values:
-                      - RTX_4090D
+                      - RTX_4090
                       # - H800_NVLINK_80GB
       volumes:
         # 挂载共享模型数据大盘（如需要）
